@@ -76,6 +76,7 @@ def dumpVoterList(fname):
 	slMatch = re.compile('^.*Td \(([R#]?\s*[0-9]+\s*)\).*$')
 	rejMatch = re.compile('^.*Td \((REJ[0-9\s]+)\).*$')
 	rejMatch2 = re.compile('^.*Td \((MCL[0-9\s]+)\).*$')
+	rejMatch3 = re.compile('^.*Td \((MBQ[0-9\s]+)\).*$')
 	tdMatch = re.compile('^.*Td \((.*)\).*$')
 
 	allLines = f.readlines()
@@ -113,6 +114,8 @@ def dumpVoterList(fname):
 		obj = rejMatch.match(line)
 		if not obj:
 			obj = rejMatch2.match(line)
+		if not obj:
+			obj = rejMatch3.match(line)
 		if obj:
 			rejNo = obj.groups()[0].strip()
 			#print '%5s %10s %s'%(slNo, rejNo, prevTds[-2])
