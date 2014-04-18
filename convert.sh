@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Voter list files contain text in encoded format, so
 # can't just run 'strings' on them and extract data.
 # These files contain 'FlateDecode'ed streams. We
@@ -11,9 +11,10 @@
 # I got some of this info from 
 # http://j-b.livejournal.com/339214.html
 #
-mkdir conv
-for f in AC*.pdf; 
+mkdir converted
+for f in ceo-files/AC*.pdf; 
 do 
 	echo $f; 
-	gs -- pdfinflt.ps $f conv/$f; 
+	fname=`echo $f | sed -e "s/ceo-files\///"`
+	gs -- pdfinflt.ps ceo-files/$fname converted/$fname; 
 done

@@ -18,11 +18,13 @@ Here :
     - The range for this full constituency is (1,348) - approx
       5 MB every file.
 
+The voter lists are fetched to the directory 'ceo-files'.
+
 Next, convert the PDF into a "decoded text" form
 
     $ ./convert.sh
 
-This will create a directory "conv" with equivalent PDF files
+This will create a directory "converted" with equivalent PDF files
 that contain decoded text.
 
 Next, generate the list

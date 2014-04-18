@@ -181,7 +181,7 @@ def dumpVoterList(outfile, fname):
 			boothLoc = "(unknown)"
 		print >>outfile, '%s, %5s, %10s, %s, %s'%(boothNo, slNo, rejNo, name, boothLoc)
 
-fnames = glob('conv/*.pdf')
+fnames = glob('converted/*.pdf')
 fnames.sort()
 outfileName = 'voterlist.csv'
 outfile = open('voterlist.csv', 'w')
