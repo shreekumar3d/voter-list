@@ -14,6 +14,8 @@ in unicode, you'd see "(Unicode encoded)" there!
 import os
 import re
 from glob import glob
+import sys
+from pprint import pprint
 
 # Manually generated from :
 #  ceokarnataka.kar.nic.in/ElectionFinalroll2014/Part_List.aspx?ACNO=154
@@ -63,7 +65,9 @@ boothKey = {
 348:'Govt. Higer Primary School, Room No-4',
 }
 
-def dumpVoterList(fname):
+prefixList = []
+
+def dumpVoterList(outfile, fname):
 	"""
 	Takes a voter list PDF file that has text in a non-encoded
 	format (i.e. not using FlateDecoding). Use convert.sh to
@@ -74,9 +78,7 @@ def dumpVoterList(fname):
 	f = open(fname, 'r')
 	boothNo = fname[-7:-4]
 	slMatch = re.compile('^.*Td \(([R#]?\s*[0-9]+\s*)\).*$')
-	rejMatch = re.compile('^.*Td \((REJ[0-9\s]+)\).*$')
-	rejMatch2 = re.compile('^.*Td \((MCL[0-9\s]+)\).*$')
-	rejMatch3 = re.compile('^.*Td \((MBQ[0-9\s]+)\).*$')
+	rejMatch = re.compile('^.*Td \(([A-Z]{3}[0-9\s]+)\).*$')
 	tdMatch = re.compile('^.*Td \((.*)\).*$')
 
 	allLines = f.readlines()
@@ -102,6 +104,7 @@ def dumpVoterList(fname):
 			except ValueError:
 				#print 'Unable to convert ', n
 				pass
+			# countDigs = reduce(lambda x,y: x+y, map(lambda x: x.isdigit()+0, '123'), 0)
 
 		# Check if this is a serial number with the "R " or "# " form
 		obj = slMatch.match(line)
@@ -112,10 +115,10 @@ def dumpVoterList(fname):
 
 		# Check if this is a voter card ID - i.e. EPIC number
 		obj = rejMatch.match(line)
-		if not obj:
-			obj = rejMatch2.match(line)
-		if not obj:
-			obj = rejMatch3.match(line)
+		#if not obj:
+		#	obj = rejMatch2.match(line)
+		#if not obj:
+		#	obj = rejMatch3.match(line)
 		if obj:
 			rejNo = obj.groups()[0].strip()
 			#print '%5s %10s %s'%(slNo, rejNo, prevTds[-2])
@@ -128,6 +131,9 @@ def dumpVoterList(fname):
 			# will not contain the name, it will contain the slNo
 			if slNo is None:
 				slNo = 'U 0'
+			# Store unique prefixes
+			if rejNo[:3] not in prefixList:
+				prefixList.append(rejNo[:3])
 			voterList.append((slNo, rejNo, prevTds[-2].strip()))
 			slNo = None
 
@@ -137,8 +143,16 @@ def dumpVoterList(fname):
 		#print 'cmp ', x, y, '=',
 		if not x[0].isdigit():
 			if not y[0].isdigit():
-				n1 = int(x.split(' ')[1])
-				n2 = int(y.split(' ')[1])
+				try:
+					n1 = int(x[1:]) # x will be in format "R xx" or "# xx" or "#xx"
+				except IndexError:
+					print >> sys.stderr, "Failed for x = ", x
+					sys.exit(1)
+				try:
+					n2 = int(y[1:])
+				except IndexError:
+					print >> sys.stderr, "Failed for y = ", y
+					sys.exit(1)
 				#print n1-n2
 				return n1-n2
 			else:
@@ -161,12 +175,20 @@ def dumpVoterList(fname):
 		# the same address, and it's likely that the guys there don't know
 		# what's the room number. Instead, they will use the booth number as
 		# the room number.
-		boothLoc =  boothKey[int(boothNo)].split(',')[0]
-		print '%s, %5s, %10s, %s, %s'%(boothNo, slNo, rejNo, name, boothLoc)
+		try:
+			boothLoc =  boothKey[int(boothNo)].split(',')[0]
+		except KeyError:
+			boothLoc = "(unknown)"
+		print >>outfile, '%s, %5s, %10s, %s, %s'%(boothNo, slNo, rejNo, name, boothLoc)
 
 fnames = glob('conv/*.pdf')
 fnames.sort()
+outfileName = 'voterlist.csv'
+outfile = open('voterlist.csv', 'w')
 #fnames = ['conv/AC1540334.pdf']
 for fname in fnames:
 	#print fname
-	dumpVoterList(fname)
+	dumpVoterList(outfile, fname)
+
+# Dump prefixes
+#pprint(prefixList)
