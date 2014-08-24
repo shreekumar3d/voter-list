@@ -3,6 +3,7 @@ import re
 import math
 from pprint import pprint
 import sys
+import codecs
 
 def computeDataRegions(thisPage):
 	tokens = thisPage.findall('.//TOKEN')
@@ -122,11 +123,37 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 		info["serial"] = ob.group()
 		textNodes.pop(0)
 	else:
-		#print textNodes[0].text
-		# possibly raise an error
-		#raise RuntimeError, "First item in rect needs to be serial"
-		print '!!! ERROR'
-		return None
+		# If the first item is not a serial number, then
+		# try to find the EPIC number and roll back by one
+		#
+		# Inability to find the serial number is mostly to do
+		# with data that creeps into the box by virtue of 
+		# landing up inside the box...
+		#
+		idx = 1
+		while True:
+			#print 'considering :',textNodes[idx].text
+			ob = reVoterId.match(textNodes[idx].text)
+			if ob:
+				#print 'matched'
+				idx = idx - 1
+				break
+			idx = idx + 1
+			if idx == len(textNodes):
+				print '!!! ERROR - reached end of list'
+				return None
+		ob = reSerial.match(textNodes[idx].text)
+		if ob:
+			info["serial"] = ob.group()
+			#print info["serial"]
+			for i in range(idx+1):
+				textNodes.pop(0)
+		else:
+			#print textNodes[0].text
+			# possibly raise an error
+			#raise RuntimeError, "First item in rect needs to be serial"
+			print '!!! ERROR - did not find serial no'
+			return None
 
 	# Next item is the EPIC number. This may be missed in
 	# some nodes!
@@ -206,5 +233,11 @@ for pageInfo in zip(range(len(pages)),pages):
 	if len(vInfo)>0:
 		voterInfo.extend(vInfo)
 
+fname = 'voterlist.csv'
+print 'Writing data for %d voters to %s'%(len(voterInfo), fname)
+
+f= codecs.open(fname,'w','utf-8')
 for vInfo in voterInfo:
-	print '%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["relative"],vInfo['residence'],vInfo["sex"],vInfo["age"])
+	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["relative"],vInfo['residence'],vInfo["sex"],vInfo["age"])
+
+f.close()
