@@ -106,7 +106,7 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 
 	reVoterId = re.compile('[A-Z].*[0-9]{6,}')
 	reElector = re.compile("Elector's") # Words seem to be getting split in the PDF
-	reRelative = re.compile("(Father|Husband)'s")
+	reRelative = re.compile("(Father|Husband|Mother)'s")
 	reHouse = re.compile("House")
 	rePhoto = re.compile("Photo")
 	reAge = re.compile("Age")
@@ -178,9 +178,12 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 		content = node.text
 		nodeChanged = False
 		for tryMatch in zip(['name','relative','residence','age','sex'], [reElector, reRelative, reHouse, reAge, reSex]):
-			if tryMatch[1].match(content):
+			ob = tryMatch[1].match(content)
+			if ob:
 				appendTo = tryMatch[0]
 				nodeChanged = True
+				if tryMatch[0] == 'relative':
+					info["relation"] = ob.groups()[0]
 				break
 		if (not nodeChanged) and (appendTo is not None):
 			info[appendTo] =( '%s %s'%(info[appendTo], content)).strip()
@@ -238,6 +241,7 @@ print 'Writing data for %d voters to %s'%(len(voterInfo), fname)
 
 f= codecs.open(fname,'w','utf-8')
 for vInfo in voterInfo:
-	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["relative"],vInfo['residence'],vInfo["sex"],vInfo["age"])
+	#pprint(vInfo)
+	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo['relation'],vInfo["relative"],vInfo['residence'],vInfo["sex"],vInfo["age"])
 
 f.close()
