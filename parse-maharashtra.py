@@ -240,8 +240,10 @@ fname = 'voterlist.csv'
 print 'Writing data for %d voters to %s'%(len(voterInfo), fname)
 
 f= codecs.open(fname,'w','utf-8')
+print >>f,"PageNo,SerialNo,EPIC,Name,Age,Sex,Relation,RelativeName,HouseInfo"
+
 for vInfo in voterInfo:
 	#pprint(vInfo)
-	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo['relation'],vInfo["relative"],vInfo['residence'],vInfo["sex"],vInfo["age"])
+	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["age"],vInfo["sex"], vInfo['relation'],vInfo["relative"],vInfo['residence'])
 
 f.close()
