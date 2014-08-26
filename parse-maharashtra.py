@@ -102,36 +102,27 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 		textNodes.pop(0)
 	else:
 		# If the first item is not a serial number, then
-		# try to find the EPIC number and roll back by one
-		#
-		# Inability to find the serial number is mostly to do
-		# with data that creeps into the box by virtue of 
-		# landing up inside the box...
-		#
+		# keep adding till you find the number
+		# This handles the case where there's an extra "(S)"
+		# No idea what this stands for !
+		serial = textNodes[0].text
 		idx = 1
 		while True:
 			#print 'considering :',textNodes[idx].text
-			ob = reVoterId.match(textNodes[idx].text)
+			ob = reSerial.match(textNodes[idx].text)
 			if ob:
 				#print 'matched'
-				idx = idx - 1
+				serial = serial + ' ' + textNodes[idx].text
+				info['serial'] = serial
+				idx = idx + 1
 				break
+			serial = serial + ' ' + textNodes[idx].text
 			idx = idx + 1
-			if idx == len(textNodes):
-				print '!!! ERROR - reached end of list'
+			if len(serial)>10:
+				print '!!! ERROR - invalid serial'
 				return None
-		ob = reSerial.match(textNodes[idx].text)
-		if ob:
-			info["serial"] = ob.group()
-			#print info["serial"]
-			for i in range(idx+1):
-				textNodes.pop(0)
-		else:
-			#print textNodes[0].text
-			# possibly raise an error
-			#raise RuntimeError, "First item in rect needs to be serial"
-			print '!!! ERROR - did not find serial no'
-			return None
+		for i in range(idx):
+			textNodes.pop(0)
 
 	# Next item is the EPIC number. This may be missed in
 	# some nodes!
