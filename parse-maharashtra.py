@@ -6,70 +6,45 @@ import sys
 import codecs
 
 def computeDataRegions(thisPage):
-	tokens = thisPage.findall('.//TOKEN')
-
-	reVoterId = re.compile('[A-Z].*[0-9]{6,}')
-	reElector = re.compile("Elector's") # Words seem to be getting split in the PDF
-	reRelative = re.compile("(Father|Husband|Mother)'s")
-	reHouse = re.compile("House")
-	rePhoto = re.compile("Photo")
-	reAge = re.compile("Age")
-	reSex = re.compile("Sex")
-	reSerial = re.compile("[0-9]+")
-
-	fields = [ reElector, reRelative, reHouse, rePhoto, reAge, reSex, reSerial, reVoterId ]
-	fieldIds = range(len(fields))
-
-	boxValues = [None]*len(fields)
-	boxNodes = [None]*len(fields)
-
-	valSerial = None
-	valVoter = None
-
+	# Every page has a xi:include attribute at the end of the page
+	# This includes a vector XML file. The XML file contains lines and rectangles
+	# the pdf2xml conversion results in this being stored in the filename_data directory
+	# We use this vector file to load rectangles (5 point GROUPS)
+	# The groups that are close to our target box size containing data are retained.  The rest are junked.
+	shapeFileName = thisPage.getchildren()[-1].attrib['href']
+	doc = ET.parse(shapeFileName)
+	root = doc.getroot()
+	groups = root.findall('GROUP')
 	rects = []
-
-	pageTotal = 0
-
-	# Demarcate the page into boxes that contain voter info
-	for tok in tokens:
-		content = tok.text
-		# If the current text matches a pattern, then we'll
-		# keep the text.  If a similar pattern repeats multiple
-		# times, only the last one will remain. This case happens
-		# with the numbers (serial number, age, maybe house no).
-		# Luckily the serial number comes last in the list, but this
-		# is a possible gotcha in this algorithm
-		for check in zip(fieldIds,fields):
-			obj = check[1].match(content)
-			if obj:
-				boxValues[check[0]] = obj.group()
-				boxNodes[check[0]] = tok
-				break
-		idx = None
-		try:
-			idx = boxValues.index(None)
-		except ValueError:
-			pass
-		if (idx >= 6) or (idx is None):
-			xVal = []
-			yVal = []
-			for nv in boxNodes:
-				if nv is None:
-					continue
-				x = float(nv.attrib['x'])
-				y = float(nv.attrib['y'])
-				w = float(nv.attrib['width'])
-				h = float(nv.attrib['height'])
-				xVal.append(x)
-				xVal.append(x+w)
-				yVal.append(y)
-				yVal.append(y+h)
-
-			boundingRect = [min(xVal), min(yVal), max(xVal), max(yVal)]
-			rectDim = [ boundingRect[2]-boundingRect[0], boundingRect[3]-boundingRect[1]]
-			rects.append(boundingRect)
-			boxValues = [None]*len(fields)
-			boxNodes = [None]*len(fields)
+	for g in groups:
+		gc = g.getchildren()
+		if len(gc)==5:
+			xvals = map(lambda v:float(v.attrib['x']), gc)
+			yvals = map(lambda v:float(v.attrib['y']), gc)
+			x1 = min(xvals)
+			y1 = min(yvals)
+			x2 = max(xvals)
+			y2 = max(yvals)
+			w = x2-x1
+			h = y2-y1
+			if w > 180 and w < 190 and h > 60 and h < 80:
+				rects.append([x1, y1, x2, y2])
+	def cmpRects(r1,r2):
+		r1_y = r1[1]
+		r2_y = r2[1]
+		if r1_y < r2_y:
+			return -1
+		elif r1_y > r2_y:
+			return 1
+		r1_x = r1[0]
+		r2_x = r2[0]
+		if r1_x < r2_x:
+			return -1
+		elif r1_x > r2_x:
+			return 1
+		return 0
+	# Sort with Y first, then X
+	rects.sort(cmp=cmpRects)
 	return rects
 
 def extractVoterInfo(textRect, textNodes, pageNo):
@@ -99,7 +74,10 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 #	for tok in textNodes[1:]:
 #		if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
 #			print 
-#		print tok.text,
+#		try:
+#			print tok.text,
+#		except:
+#			print 'Unicode',
 #		prevTok = tok
 #	print
 #	print '-------'
@@ -215,7 +193,7 @@ def getVoterInfo(thisPage, rects, pageNo):
 			y = float(tok.attrib['y'])
 			w = float(tok.attrib['width'])
 			h = float(tok.attrib['height'])
-			if pointInRect(x,y, thisRect) or pointInRect(x+w, y+h, thisRect):
+			if pointInRect(x,y, thisRect):
 				thisRectNodes.append(tok)	
 
 		# 
