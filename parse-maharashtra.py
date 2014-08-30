@@ -126,7 +126,7 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 
 	# Next item is the EPIC number. This may be missed in
 	# some nodes!
-	info["epic"] = None
+	info["epic"] = ""
 	ob = reVoterId.match(textNodes[0].text)
 	if ob:
 		info["epic"] = ob.group()
