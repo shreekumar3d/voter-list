@@ -27,7 +27,7 @@ def computeDataRegions(thisPage):
 			y2 = max(yvals)
 			w = x2-x1
 			h = y2-y1
-			if w > 180 and w < 190 and h > 60 and h < 80:
+			if w > 170 and w < 190 and h > 60 and h < 80:
 				rects.append([x1, y1, x2, y2])
 	def cmpRects(r1,r2):
 		r1_y = r1[1]
@@ -49,7 +49,7 @@ def computeDataRegions(thisPage):
 
 def extractVoterInfo(textRect, textNodes, pageNo):
 
-	v_tolerance = 1.0
+	v_tolerance = 5.0
 	def cmpBoxFields(a, b):
 		y1 = float(a.attrib['y'])
 		y2 = float(b.attrib['y'])
@@ -68,7 +68,7 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 
 	textNodes.sort(cmp=cmpBoxFields)
 
-#	print '-------'
+#	print 'Page %d -------'%(pageNo)
 #	print textNodes[0].text,
 #	prevTok = textNodes[0]
 #	for tok in textNodes[1:]:
@@ -133,18 +133,27 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 		textNodes.pop(0)
 
 	# Filter out certain keywords that will not make it into the data
-	textNodes = filter(lambda x: x.text not in ['Name',':','No.', 'Photo','Not', 'Available' ], textNodes)
+	blacklist = ['Name',':','No.', 'Photo','Not', 'Available']
+	textNodes = filter(lambda x: x.text not in blacklist, textNodes)
+	outNodes = []
+	for s in textNodes:
+		s = s.text.strip()
+		for token in blacklist:
+			s = s.replace(token, '')
+			s = s.strip()
+		outNodes.append(s)
+	textNodes = outNodes
 
 	appendTo = None
 	info["name"] = ""
 	info["relative"] = ""
+	info["relation"] = ""
 	info["residence"] = ""
 	info["age"] = ""
 	info["sex"] = ""
 
-	appendTo = None
-	for node in textNodes:
-		content = node.text
+	appendTo = "name" # By default after EPIC
+	for content in textNodes:
 		nodeChanged = False
 		for tryMatch in zip(['name','relative','residence','age','sex'], [reElector, reRelative, reHouse, reAge, reSex]):
 			ob = tryMatch[1].match(content)
@@ -199,9 +208,12 @@ pages = root.findall('PAGE')
 
 voterInfo = []
 for pageInfo in zip(range(len(pages)),pages):
+	pageNo = pageInfo[0]+1
+	if pageNo !=3 :
+		continue
 	rects = computeDataRegions(pageInfo[1])
 	#print 'Info about %d voters is in page %d'%(len(rects),pageInfo[0]+1)
-	vInfo = getVoterInfo(pageInfo[1], rects, pageInfo[0]+1)
+	vInfo = getVoterInfo(pageInfo[1], rects, pageNo)
 	if len(vInfo)>0:
 		voterInfo.extend(vInfo)
 
@@ -213,6 +225,6 @@ print >>f,"PageNo,SerialNo,EPIC,Name,Age,Sex,Relation,RelativeName,HouseInfo"
 
 for vInfo in voterInfo:
 	#pprint(vInfo)
-	print >>f,'%s,%s,%s,%s,%s,%s,%s,%s,%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["age"],vInfo["sex"], vInfo['relation'],vInfo["relative"],vInfo['residence'])
+	print >>f,'%s|%s|%s|%s|%s|%s|%s|%s|%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["age"],vInfo["sex"], vInfo['relation'],vInfo["relative"],vInfo['residence'])
 
 f.close()
