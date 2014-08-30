@@ -116,7 +116,8 @@ def computeDataRegions(thisPage):
 	return rects
 
 def extractVoterInfo(textRect, textNodes, pageNo):
-
+	if len(textNodes) == 0:
+		return None
 	v_tolerance = 5.0
 	def cmpBoxFields(a, b):
 		y1 = float(a.attrib['y'])
