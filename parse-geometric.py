@@ -205,12 +205,15 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 	blacklist = ['Name',':','No.', 'Photo','Not', 'Available']
 	textNodes = filter(lambda x: x.text not in blacklist, textNodes)
 	outNodes = []
+	textCoords = []
 	for s in textNodes:
-		s = s.text.strip()
+		txt = s.text.strip()
 		for token in blacklist:
-			s = s.replace(token, '')
-			s = s.strip()
-		outNodes.append(s)
+			txt = txt.replace(token, '')
+			txt = txt.strip()
+		if len(txt)>0:
+			outNodes.append(txt)
+			textCoords.append([float(s.attrib['x']), float(s.attrib['y'])])
 	textNodes = outNodes
 
 	appendTo = None
@@ -222,11 +225,16 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 	info["sex"] = ""
 
 	appendTo = "name" # By default after EPIC
-	for content in textNodes:
+	for content,coords in zip(textNodes, textCoords):
 		nodeChanged = False
 		for tryMatch in zip(['name','relative','residence','age','sex'], [reElector, reRelative, reHouse, reAge, reSex]):
 			ob = tryMatch[1].match(content)
 			if ob:
+				# Geometric constraint: these labels are aligned
+				# to the left
+				if tryMatch[0] in ["age", "name", "relative", "residence"]:
+					if coords[0]>(textRect[0]+20):
+						continue
 				appendTo = tryMatch[0]
 				nodeChanged = True
 				if tryMatch[0] == 'relative':
