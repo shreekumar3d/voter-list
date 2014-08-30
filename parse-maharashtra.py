@@ -29,6 +29,74 @@ def computeDataRegions(thisPage):
 			h = y2-y1
 			if w > 170 and w < 190 and h > 60 and h < 80:
 				rects.append([x1, y1, x2, y2])
+
+	hlines = []
+	vlines = []
+	for g in groups:
+		gc = g.getchildren()
+		if len(gc)==2:
+			xvals = map(lambda v:float(v.attrib['x']), gc)
+			yvals = map(lambda v:float(v.attrib['y']), gc)
+			x1 = xvals[0]
+			y1 = yvals[0]
+			x2 = xvals[1]
+			y2 = yvals[1]
+			if x1 == x2:
+				l = math.fabs(y2-y1)
+				if l>60 and l<80:
+					if y1<y2:
+						vlines.append([x1,y1,x2,y2])
+					else:
+						vlines.append([x1,y2,x2,y1])
+			if y1 == y2:
+				l = math.fabs(x2-x1)
+				if l>170 and l<190:
+					if x1<x2:
+						hlines.append([x1,y1,x2,y2])
+					else:
+						hlines.append([x2,y1,x1,y2])
+	def sortV(l1, l2):
+		if l1[1]<l2[1]:
+			return -1
+		elif l1[1]>l2[1]:
+			return 1
+		return 0
+	hlines.sort(cmp=sortV)
+	vlines.sort(cmp=sortV)
+
+	def coordMatch(v1, v2):
+		if math.fabs(v1-v2)<0.5:
+			return True
+		return False
+
+	while hlines:
+		hcand1 = hlines[0]
+		vcand1 = None
+		hcand2 = None
+		vcand2 = None
+		# find a vertical line that starts at first corner
+		for vl in vlines:
+			if coordMatch(hcand1[0], vl[0]) and coordMatch(hcand1[1], vl[1]):
+				vcand1 = vl
+				break
+		if vcand1:
+			# find a horizontal line that starts at first corner
+			for hl in hlines:
+				if coordMatch(vcand1[2], hl[0]) and coordMatch(vcand1[3], hl[1]):
+					hcand2 = hl
+					break
+		if hcand2:
+			for vl in vlines:
+				if coordMatch(hcand2[2], vl[2]) and coordMatch(hcand2[3], vl[3]):
+					vcand2 = vl
+					break
+		if vcand2:
+			rects.append([hcand1[0], hcand1[1], hcand2[2], hcand2[3]])
+			hlines.remove(hcand2)
+			vlines.remove(vcand1)
+			vlines.remove(vcand2)
+		hlines.remove(hcand1)
+
 	def cmpRects(r1,r2):
 		r1_y = r1[1]
 		r2_y = r2[1]
