@@ -277,8 +277,6 @@ pages = root.findall('PAGE')
 voterInfo = []
 for pageInfo in zip(range(len(pages)),pages):
 	pageNo = pageInfo[0]+1
-	if pageNo !=3 :
-		continue
 	rects = computeDataRegions(pageInfo[1])
 	#print 'Info about %d voters is in page %d'%(len(rects),pageInfo[0]+1)
 	vInfo = getVoterInfo(pageInfo[1], rects, pageNo)
