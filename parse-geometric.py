@@ -4,6 +4,8 @@ import math
 from pprint import pprint
 import sys
 import codecs
+import argparse
+import sys
 
 def computeDataRegions(thisPage):
 	# Every page has a xi:include attribute at the end of the page
@@ -279,7 +281,14 @@ def getVoterInfo(thisPage, rects, pageNo):
 			voterInfo.append(info)
 	return voterInfo
 
-doc = ET.parse('indented-vl-eng.xml')
+#
+# Script execution starts here...
+#
+
+parser = argparse.ArgumentParser()
+parser.add_argument("filename", type=str, help="file to process")
+args = parser.parse_args()
+doc = ET.parse(args.filename) #'indented-vl-eng.xml'
 root = doc.getroot()
 pages = root.findall('PAGE')
 
