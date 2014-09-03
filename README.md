@@ -1,7 +1,9 @@
 voter-list
 ==========
 
-Scripts to process voter lists in PDF format.
+Scripts to process voter lists in PDF format. Voter lists with
+indic chars in them are not handled yet. Only english voter
+lists work as expected. And even then, YMMV.
 
 Usage
 -----
@@ -42,9 +44,16 @@ This will generate voterlist.csv.  Note: csv file has pipe symbol (|)
 as separator. This is necessary due to usage of the comma in address
 field.
 
+After this is done, have a look at the generated voterlist.csv. It may
+be necessary to tweak config.py to use slightly different values...
+
 ### Earlier Method ###
 
-Next, convert the PDF into a "decoded text" form
+This method relies on the relative ordering of data in PDF files. This
+was hurriedly cooked up by Shree earlier, and is not a robust method.
+Not recommended for use.
+
+Convert the PDF into a "decoded text" form
 
     $ ./convert.sh
 
