@@ -20,6 +20,30 @@ Here :
 
 The voter lists are fetched to the directory 'ceo-files'.
 
+After this, there are two methods to process the files.
+
+### New Method ###
+
+This method uses pdf2xml to process the PDF file, followed by
+geometric methods to determine the data.
+
+First, you need to run pdftoxml.  For Windows users, precompiled
+binaries are included in precompiled-binaries/win32/
+
+    $ pdftoxml ceo-files/AC1540310.pdf converted/AC1540310.xml
+
+This converts the source PDF file into an XML representation. You
+will see an additional directory "AC1540310.xml_data" in the "converted"
+direction.  This contains files referenced in the xml.
+
+    $ ./parse-geometric.py converted/AC1540310.xml
+
+This will generate voterlist.csv.  Note: csv file has pipe symbol (|)
+as separator. This is necessary due to usage of the comma in address
+field.
+
+### Earlier Method ###
+
 Next, convert the PDF into a "decoded text" form
 
     $ ./convert.sh
