@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import xml.etree.ElementTree as ET
 import re
 import math
@@ -38,7 +39,11 @@ def computeDataRegions(filename, cfg, thisPage):
 	# We use this vector file to load rectangles (5 point GROUPS)
 	# The groups that are close to our target box size containing data are retained.  The rest are junked.
 	shapeFileName = thisPage.getchildren()[-1].attrib['href']
-	doc = ET.parse(os.path.join(os.path.dirname(filename), shapeFileName))
+	try:
+		doc = ET.parse(os.path.join(os.path.dirname(filename), shapeFileName))
+	except:
+		# maybe the path in the file is OK
+		doc = ET.parse(shapeFileName)
 	root = doc.getroot()
 	groups = root.findall('GROUP')
 	rects = []
