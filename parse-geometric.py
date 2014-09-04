@@ -6,6 +6,7 @@ import sys
 import codecs
 import argparse
 import sys
+import string
 
 def computeDataRegions(thisPage):
 	# Every page has a xi:include attribute at the end of the page
@@ -336,14 +337,20 @@ def getVoterInfo(thisPage, rects, pageNo):
 # Script execution starts here...
 #
 
+# Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", type=str, help="file to process")
 args = parser.parse_args()
+
+# Parse document, find all pages
 doc = ET.parse(args.filename) #'indented-vl-eng.xml'
 root = doc.getroot()
 pages = root.findall('PAGE')
 
 voterInfo = []
+# For each page, figure out the rects that
+# contain voter info, then extract data
+# from each.
 for pageInfo in zip(range(len(pages)),pages):
 	pageNo = pageInfo[0]+1
 	rects = computeDataRegions(pageInfo[1])
@@ -358,8 +365,11 @@ print 'Writing data for %d voters to %s'%(len(voterInfo), fname)
 f= codecs.open(fname,'w','utf-8')
 print >>f,"PageNo,SerialNo,EPIC,Name,Age,Sex,Relation,RelativeName,HouseInfo"
 
+fieldOrder = ['page', 'serial', 'epic', 'name', 'age', 'sex', 'relation', 
+              'relative', 'residence' ]
 for vInfo in voterInfo:
-	#pprint(vInfo)
-	print >>f,'%s|%s|%s|%s|%s|%s|%s|%s|%s'%(vInfo['page'],vInfo["serial"],vInfo["epic"],vInfo["name"],vInfo["age"],vInfo["sex"], vInfo['relation'],vInfo["relative"],vInfo['residence'])
+	values = map(lambda fieldName: vInfo[fieldName], fieldOrder)
+	values[0] = str(values[0]) # Convert page number to string
+	print >>f, string.join(values, '|') # pipe separator, not comma
 
 f.close()
