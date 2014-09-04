@@ -9,15 +9,32 @@ import sys
 
 def computeDataRegions(thisPage):
 	# Every page has a xi:include attribute at the end of the page
-	# This includes a vector XML file. The XML file contains lines and rectangles
-	# the pdf2xml conversion results in this being stored in the filename_data directory
-	# We use this vector file to load rectangles (5 point GROUPS)
-	# The groups that are close to our target box size containing data are retained.  The rest are junked.
+	# This includes a vector XML file. The XML file contains lines and 
+	# rectangles. 
+	#
+	# pdf2xml conversion results in this being stored in 
+	# the <filename>_data directory.
+	#
+	# We use this vector file to load rectangles (5 point GROUP).
+	#
+	# The rectangles that are close to our target box size (with some
+	# fuzz) are retained.
+	#
+	# Line GROUPs in the vector file are taken.  Lines that are
+	# horizontal OR vertical and satisfy the target box size requirements
+	# are retained.  Out of these, rectangles are created where possible.
+	#
+	# The rectangles from the 5 point GROUP and the 2 point GROUP are
+	# the final rectangles that are considered to contain voter data.
+	#
 	shapeFileName = thisPage.getchildren()[-1].attrib['href']
 	doc = ET.parse(shapeFileName)
 	root = doc.getroot()
 	groups = root.findall('GROUP')
 	rects = []
+
+	# Get rects from the 5 point GROUPs that satisfy our size
+	# requirements
 	for g in groups:
 		gc = g.getchildren()
 		if len(gc)==5:
@@ -32,6 +49,12 @@ def computeDataRegions(thisPage):
 			if w > 170 and w < 190 and h > 60 and h < 80:
 				rects.append([x1, y1, x2, y2])
 
+	# Extract lines from the 2 point GROUP that satisfy our size
+	# requirements, and are horizontal OR vertical.
+	#
+	# Each line [x1,y1,x2,y2] is stored such that
+	#       x1<=x2 and y1<=y2
+	#
 	hlines = []
 	vlines = []
 	for g in groups:
@@ -57,20 +80,45 @@ def computeDataRegions(thisPage):
 						hlines.append([x1,y1,x2,y2])
 					else:
 						hlines.append([x2,y1,x1,y2])
+
+	# Vertical sort function, based on Y
 	def sortV(l1, l2):
 		if l1[1]<l2[1]:
 			return -1
 		elif l1[1]>l2[1]:
 			return 1
 		return 0
+
+	# Sort lines by Y. This will help the next phase.
 	hlines.sort(cmp=sortV)
 	vlines.sort(cmp=sortV)
 
+	# Coordinate value tolerance based match.
 	def coordMatch(v1, v2):
 		if math.fabs(v1-v2)<0.5:
 			return True
 		return False
 
+	# Combine the lines to create rectangles where possible.
+	# A rectangle needs 2 horiz and 2 vert lines
+	#
+	# We start with a horizontal line (hcand1). Next, we find
+	# an attachable vertical line vcand1. hcand2 is then chosen
+	# to fit vcand1. vcand2 is chosen to attach to hcand2 and
+	# hcand1.
+	#
+	#          hcand1
+	#    +-----------------------+
+	#    |                       |
+	#  v |                       |v
+	#  c |                       |c
+	#  a |                       |a
+	#  n |                       |n
+	#  d |                       |d
+	#  1 |                       |2
+	#    +-----------------------+
+	#          hcand2
+	#
 	while hlines:
 		hcand1 = hlines[0]
 		vcand1 = None
@@ -89,7 +137,7 @@ def computeDataRegions(thisPage):
 					break
 		if hcand2:
 			for vl in vlines:
-				if coordMatch(hcand2[2], vl[2]) and coordMatch(hcand2[3], vl[3]):
+				if coordMatch(hcand2[2], vl[2]) and coordMatch(hcand2[3], vl[3]) and coordMatch(vl[0], hcand2[2]) and coordMatch(vl[1], hcand2[3]):
 					vcand2 = vl
 					break
 		if vcand2:
@@ -209,7 +257,10 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 	outNodes = []
 	textCoords = []
 	for s in textNodes:
-		txt = s.text.strip()
+		try:
+			txt = s.text.strip()
+		except:
+			continue
 		for token in blacklist:
 			txt = txt.replace(token, '')
 			txt = txt.strip()
