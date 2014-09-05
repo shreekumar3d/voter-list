@@ -1,7 +1,9 @@
 voter-list
 ==========
 
-Scripts to process voter lists in PDF format.
+Scripts to process voter lists in PDF format. Voter lists with
+indic chars in them are not handled yet. Only english voter
+lists work as expected. And even then, YMMV.
 
 Usage
 -----
@@ -20,7 +22,38 @@ Here :
 
 The voter lists are fetched to the directory 'ceo-files'.
 
-Next, convert the PDF into a "decoded text" form
+After this, there are two methods to process the files.
+
+### New Method ###
+
+This method uses pdf2xml to process the PDF file, followed by
+geometric methods to determine the data.
+
+First, you need to run pdftoxml.  For Windows users, precompiled
+binaries are included in precompiled-binaries/win32/
+
+    $ pdftoxml ceo-files/AC1540310.pdf converted/AC1540310.xml
+
+This converts the source PDF file into an XML representation. You
+will see an additional directory "AC1540310.xml_data" in the "converted"
+direction.  This contains files referenced in the xml.
+
+    $ ./parse-geometric.py converted/AC1540310.xml
+
+This will generate voterlist.csv.  Note: csv file has pipe symbol (|)
+as separator. This is necessary due to usage of the comma in address
+field.
+
+After this is done, have a look at the generated voterlist.csv. It may
+be necessary to tweak config.py to use slightly different values...
+
+### Earlier Method ###
+
+This method relies on the relative ordering of data in PDF files. This
+was hurriedly cooked up by Shree earlier, and is not a robust method.
+Not recommended for use.
+
+Convert the PDF into a "decoded text" form
 
     $ ./convert.sh
 

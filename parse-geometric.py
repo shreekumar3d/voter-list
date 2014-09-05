@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import xml.etree.ElementTree as ET
 import re
 import math
@@ -7,8 +8,32 @@ import codecs
 import argparse
 import sys
 import string
+from copy import copy
+import os
 
-def computeDataRegions(thisPage):
+config = {}
+
+def loadConfig():
+	global config
+	ign = {}
+	execfile('config.py', ign, config)
+
+def getConfig(filename):
+	filename = os.path.basename(filename)
+	filename = filename.replace('.xml','')
+	global config
+	# start off with defaults
+	retval = copy(config['default'])
+	# Apply overrides
+	try:
+		thisOverride = config['override'][filename]
+		for kv in thisOverride.keys():
+			retval[kv] = thisOverride[kv]
+	except:
+		pass
+	return retval
+
+def computeDataRegions(filename, cfg, thisPage):
 	# Every page has a xi:include attribute at the end of the page
 	# This includes a vector XML file. The XML file contains lines and 
 	# rectangles. 
@@ -29,13 +54,21 @@ def computeDataRegions(thisPage):
 	# the final rectangles that are considered to contain voter data.
 	#
 	shapeFileName = thisPage.getchildren()[-1].attrib['href']
-	doc = ET.parse(shapeFileName)
+	try:
+		doc = ET.parse(os.path.join(os.path.dirname(filename), shapeFileName))
+	except:
+		# maybe the path in the file is OK
+		doc = ET.parse(shapeFileName)
 	root = doc.getroot()
 	groups = root.findall('GROUP')
 	rects = []
 
 	# Get rects from the 5 point GROUPs that satisfy our size
 	# requirements
+	minW = cfg['infoBoxWidthRange'][0]
+	maxW = cfg['infoBoxWidthRange'][1]
+	minH = cfg['infoBoxHeightRange'][0]
+	maxH = cfg['infoBoxHeightRange'][1]
 	for g in groups:
 		gc = g.getchildren()
 		if len(gc)==5:
@@ -47,7 +80,7 @@ def computeDataRegions(thisPage):
 			y2 = max(yvals)
 			w = x2-x1
 			h = y2-y1
-			if w > 170 and w < 190 and h > 60 and h < 80:
+			if w > minW and w < maxW and h > minH and h < maxH:
 				rects.append([x1, y1, x2, y2])
 
 	# Extract lines from the 2 point GROUP that satisfy our size
@@ -69,14 +102,14 @@ def computeDataRegions(thisPage):
 			y2 = yvals[1]
 			if x1 == x2:
 				l = math.fabs(y2-y1)
-				if l>60 and l<80:
+				if l>minH and l<maxH:
 					if y1<y2:
 						vlines.append([x1,y1,x2,y2])
 					else:
 						vlines.append([x1,y2,x2,y1])
 			if y1 == y2:
 				l = math.fabs(x2-x1)
-				if l>170 and l<190:
+				if l>minW and l<maxW:
 					if x1<x2:
 						hlines.append([x1,y1,x2,y2])
 					else:
@@ -166,10 +199,10 @@ def computeDataRegions(thisPage):
 	rects.sort(cmp=cmpRects)
 	return rects
 
-def extractVoterInfo(textRect, textNodes, pageNo):
+def extractVoterInfo(cfg, textRect, textNodes, pageNo):
 	if len(textNodes) == 0:
 		return None
-	v_tolerance = 5.0
+	v_tolerance = cfg['lineSeparation']
 	def cmpBoxFields(a, b):
 		y1 = float(a.attrib['y'])
 		y2 = float(b.attrib['y'])
@@ -299,7 +332,7 @@ def extractVoterInfo(textRect, textNodes, pageNo):
 	#print info
 	return info
 
-def getVoterInfo(thisPage, rects, pageNo):
+def getVoterInfo(cfg, thisPage, rects, pageNo):
 	def pointInRect(x, y, r):
 		eps = 0.1
 		if x<(r[0]-eps):
@@ -328,7 +361,7 @@ def getVoterInfo(thisPage, rects, pageNo):
 				thisRectNodes.append(tok)	
 
 		# 
-		info = extractVoterInfo(thisRect, thisRectNodes,pageNo)
+		info = extractVoterInfo(cfg, thisRect, thisRectNodes,pageNo)
 		if info is not None:
 			voterInfo.append(info)
 	return voterInfo
@@ -343,9 +376,13 @@ parser.add_argument("filename", type=str, help="file to process")
 args = parser.parse_args()
 
 # Parse document, find all pages
+print 'Processing %s...'%(args.filename)
 doc = ET.parse(args.filename) #'indented-vl-eng.xml'
 root = doc.getroot()
 pages = root.findall('PAGE')
+
+loadConfig()
+cfg = getConfig(args.filename)
 
 voterInfo = []
 # For each page, figure out the rects that
@@ -353,9 +390,9 @@ voterInfo = []
 # from each.
 for pageInfo in zip(range(len(pages)),pages):
 	pageNo = pageInfo[0]+1
-	rects = computeDataRegions(pageInfo[1])
+	rects = computeDataRegions(args.filename, cfg, pageInfo[1])
 	#print 'Info about %d voters is in page %d'%(len(rects),pageInfo[0]+1)
-	vInfo = getVoterInfo(pageInfo[1], rects, pageNo)
+	vInfo = getVoterInfo(cfg, pageInfo[1], rects, pageNo)
 	if len(vInfo)>0:
 		voterInfo.extend(vInfo)
 
