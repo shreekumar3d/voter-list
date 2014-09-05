@@ -47,6 +47,34 @@ field.
 After this is done, have a look at the generated voterlist.csv. It may
 be necessary to tweak config.py to use slightly different values...
 
+#### Debug Information ####
+
+parse-geometric can dump information about it's internal processing.
+This can be used to fine-tune parameters, as well as to understand what
+is happening behind the scenes.
+
+This is activated via the -d option.
+
+To understand processing for epic REJ5021886, you might use:
+
+    $ ./parse-geometric.py -d -e REJ5021886 converted/AC1540347.xml
+
+This will dump info about all voter records for REJ5021886 in the file.
+(Note: there may be more than one. We don't differentiate among the
+multiple records _yet_)
+
+To specify a specific page, use the page option "-p". This will dump
+all records in the specified page.
+
+If both epic and page are given, then a specific record only is dumped,
+and that only if it exists. 
+
+The script will not warn if no records match in debug mode. If you see 
+no output, please check params!a
+
+If you don't give any of -p or -d options, then debug info will be
+dumped for all records!
+
 ### Earlier Method ###
 
 This method relies on the relative ordering of data in PDF files. This
