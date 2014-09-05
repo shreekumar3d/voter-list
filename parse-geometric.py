@@ -320,10 +320,10 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 				nodeChanged = True
 				if tryMatch[0] == 'relative':
 					info["relation"] = ob.groups()[0]
-				info["debug"][tryMatch[0]].append(coords)
 				break
 		if (not nodeChanged) and (appendTo is not None):
 			info[appendTo] =( '%s %s'%(info[appendTo], content)).strip()
+			info["debug"][appendTo].append(coords)
 		else:
 			info['debug']['rejected'].append(coords)
 
@@ -392,6 +392,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("filename", type=str, help="file to process")
 parser.add_argument("-e", "--epic", type=str, help="EPIC number filter, use with debugging")
 parser.add_argument("-p", "--page", type=int, help="Page number, use with debugging")
+parser.add_argument("-s", "--source-pdf", type=str, help="Use this source PDF file for annotation. This will typically be the original source for the XML file.")
 parser.add_argument("-d", "--debug", help="Generate debug information. If both 'epic' and 'page' are specified, then match both. If both are not given, then all records are dumped.  If only one is specified, then only that aspect is matched.", action="store_true")
 args = parser.parse_args()
 
@@ -432,6 +433,10 @@ def debugMatch(pageNo, epic):
 # from each.
 for pageInfo in zip(range(len(pages)),pages):
 	pageNo = pageInfo[0]+1
+	# Skip pages if debug page filter is active
+	if args.debug and (args.page is not None):
+		if pageNo != args.page:
+			continue
 	rects = computeDataRegions(args.filename, cfg, pageInfo[1])
 	#print 'Info about %d voters is in page %d'%(len(rects),pageInfo[0]+1)
 	vInfo = getVoterInfo(cfg, pageInfo[1], rects, pageNo, debugMatch)
@@ -452,3 +457,23 @@ for vInfo in voterInfo:
 	print >>f, string.join(values, '|') # pipe separator, not comma
 
 f.close()
+
+def createRect(r, x, y, w, h):
+	attribs = {
+		'style':"fill:none;stroke:#ff0000;stroke-opacity:1",
+		'd':"M %f %f L %f %f L %f %f L %f %f L %f %f"%(x, y, x+w, y, x+w, y+h, x, y+h, x, y) }
+	rect = ET.SubElement(r, 'ns0:path', attribs)
+	return rect
+
+if (args.debug is not None) and (args.page is not None) and (args.source_pdf is not None):
+	output = 'debug.svg'
+	print 'Creating %s for page %d ...'%(output, args.page)
+	os.system("pdf2svg %s %s %d"%(args.source_pdf, output, args.page))
+	svgDoc = ET.parse(output)
+	svgRoot = svgDoc.getroot()
+	for vInfo in voterInfo:
+		debugInfo = vInfo['debug']
+		for kv in debugInfo.keys():
+			for rect in debugInfo[kv]:
+				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3])
+	svgDoc.write(output)
