@@ -94,7 +94,13 @@ Next, generate the list
 
 This will save the voter list in the file 'voterlist.csv'
 
-Next, search with good-ol-grep ! You can search by name or
+Searching
+-----
+
+PS: It would be really nice to make apps of various types
+that use the data.
+
+Search with good-ol-grep ! You can search by name or
 EPIC number
 
     $ grep REJXXXXXXX voterlist.csv
