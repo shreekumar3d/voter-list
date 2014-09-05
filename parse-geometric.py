@@ -199,7 +199,7 @@ def computeDataRegions(filename, cfg, thisPage):
 	rects.sort(cmp=cmpRects)
 	return rects
 
-def extractVoterInfo(cfg, textRect, textNodes, pageNo):
+def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
 		return None
 	v_tolerance = cfg['lineSeparation']
@@ -221,19 +221,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo):
 
 	textNodes.sort(cmp=cmpBoxFields)
 
-#	print 'Page %d -------'%(pageNo)
-#	print textNodes[0].text,
-#	prevTok = textNodes[0]
-#	for tok in textNodes[1:]:
-#		if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
-#			print 
-#		try:
-#			print tok.text,
-#		except:
-#			print 'Unicode',
-#		prevTok = tok
-#	print
-#	print '-------'
+	boxTextNodes = copy(textNodes)
 
 	reVoterId = re.compile('[A-Z].*[0-9]{6,}')
 	reElector = re.compile("Elector's") # Words seem to be getting split in the PDF
@@ -300,7 +288,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo):
 			txt = txt.strip()
 		if len(txt)>0:
 			outNodes.append(txt)
-			textCoords.append([float(s.attrib['x']), float(s.attrib['y'])])
+			textCoords.append([float(s.attrib['x']), float(s.attrib['y']), float(s.attrib['width']), float(s.attrib['height'])])
 	textNodes = outNodes
 
 	appendTo = None
@@ -310,6 +298,12 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo):
 	info["residence"] = ""
 	info["age"] = ""
 	info["sex"] = ""
+
+	infoKeys = info.keys()
+	info["debug"] = {}
+	for k in infoKeys:
+		info['debug'][k] = []
+	info['debug']['rejected'] = []
 
 	appendTo = "name" # By default after EPIC
 	for content,coords in zip(textNodes, textCoords):
@@ -326,13 +320,36 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo):
 				nodeChanged = True
 				if tryMatch[0] == 'relative':
 					info["relation"] = ob.groups()[0]
+				info["debug"][tryMatch[0]].append(coords)
 				break
 		if (not nodeChanged) and (appendTo is not None):
 			info[appendTo] =( '%s %s'%(info[appendTo], content)).strip()
+		else:
+			info['debug']['rejected'].append(coords)
+
+	if debugMatch(pageNo, info['epic']):
+		print 'Matching record at page %3d'%(pageNo)
+		indent = '  '
+		print indent,
+		print boxTextNodes[0].text,
+		prevTok = boxTextNodes[0]
+		for tok in boxTextNodes[1:]:
+			if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
+				print 
+				print indent,
+			try:
+				print tok.text,
+			except:
+				print 'Unicode',
+			prevTok = tok
+		print
+		print 'Output for record:'
+		pprint(info)
+
 	#print info
 	return info
 
-def getVoterInfo(cfg, thisPage, rects, pageNo):
+def getVoterInfo(cfg, thisPage, rects, pageNo, debugMatch):
 	def pointInRect(x, y, r):
 		eps = 0.1
 		if x<(r[0]-eps):
@@ -361,7 +378,7 @@ def getVoterInfo(cfg, thisPage, rects, pageNo):
 				thisRectNodes.append(tok)	
 
 		# 
-		info = extractVoterInfo(cfg, thisRect, thisRectNodes,pageNo)
+		info = extractVoterInfo(cfg, thisRect, thisRectNodes,pageNo, debugMatch)
 		if info is not None:
 			voterInfo.append(info)
 	return voterInfo
@@ -373,6 +390,9 @@ def getVoterInfo(cfg, thisPage, rects, pageNo):
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", type=str, help="file to process")
+parser.add_argument("-e", "--epic", type=str, help="EPIC number filter, use with debugging")
+parser.add_argument("-p", "--page", type=int, help="Page number, use with debugging")
+parser.add_argument("-d", "--debug", help="Generate debug information. If both 'epic' and 'page' are specified, then match both. If both are not given, then all records are dumped.  If only one is specified, then only that aspect is matched.", action="store_true")
 args = parser.parse_args()
 
 # Parse document, find all pages
@@ -385,6 +405,28 @@ loadConfig()
 cfg = getConfig(args.filename)
 
 voterInfo = []
+
+def debugMatch(pageNo, epic):
+	if not args.debug:
+		return False
+
+	# debug all ?
+	if (args.epic is None) and (args.page is None):
+		return True
+
+	if (args.epic is not None) and (args.page is not None):
+		if (args.epic == epic) and (args.page == pageNo):
+			return True
+		return False
+
+	if (args.epic is not None) and (args.epic == epic):
+		return True
+
+	if (args.page is not None) and (args.page == pageNo):
+		return True
+
+	return False
+
 # For each page, figure out the rects that
 # contain voter info, then extract data
 # from each.
@@ -392,7 +434,7 @@ for pageInfo in zip(range(len(pages)),pages):
 	pageNo = pageInfo[0]+1
 	rects = computeDataRegions(args.filename, cfg, pageInfo[1])
 	#print 'Info about %d voters is in page %d'%(len(rects),pageInfo[0]+1)
-	vInfo = getVoterInfo(cfg, pageInfo[1], rects, pageNo)
+	vInfo = getVoterInfo(cfg, pageInfo[1], rects, pageNo, debugMatch)
 	if len(vInfo)>0:
 		voterInfo.extend(vInfo)
 
