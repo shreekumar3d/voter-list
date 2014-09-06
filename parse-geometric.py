@@ -33,42 +33,8 @@ def getConfig(filename):
 		pass
 	return retval
 
-def computeDataRegions(filename, cfg, thisPage):
-	# Every page has a xi:include attribute at the end of the page
-	# This includes a vector XML file. The XML file contains lines and 
-	# rectangles. 
-	#
-	# pdf2xml conversion results in this being stored in 
-	# the <filename>_data directory.
-	#
-	# We use this vector file to load rectangles (5 point GROUP).
-	#
-	# The rectangles that are close to our target box size (with some
-	# fuzz) are retained.
-	#
-	# Line GROUPs in the vector file are taken.  Lines that are
-	# horizontal OR vertical and satisfy the target box size requirements
-	# are retained.  Out of these, rectangles are created where possible.
-	#
-	# The rectangles from the 5 point GROUP and the 2 point GROUP are
-	# the final rectangles that are considered to contain voter data.
-	#
-	shapeFileName = thisPage.getchildren()[-1].attrib['href']
-	try:
-		doc = ET.parse(os.path.join(os.path.dirname(filename), shapeFileName))
-	except:
-		# maybe the path in the file is OK
-		doc = ET.parse(shapeFileName)
-	root = doc.getroot()
-	groups = root.findall('GROUP')
+def findRects(groups, minW, maxW, minH, maxH):
 	rects = []
-
-	# Get rects from the 5 point GROUPs that satisfy our size
-	# requirements
-	minW = cfg['infoBoxWidthRange'][0]
-	maxW = cfg['infoBoxWidthRange'][1]
-	minH = cfg['infoBoxHeightRange'][0]
-	maxH = cfg['infoBoxHeightRange'][1]
 	for g in groups:
 		gc = g.getchildren()
 		if len(gc)==5:
@@ -181,6 +147,43 @@ def computeDataRegions(filename, cfg, thisPage):
 			vlines.remove(vcand2)
 		hlines.remove(hcand1)
 
+	return rects
+
+def computeDataRegions(filename, cfg, thisPage):
+	# Every page has a xi:include attribute at the end of the page
+	# This includes a vector XML file. The XML file contains lines and 
+	# rectangles. 
+	#
+	# pdf2xml conversion results in this being stored in 
+	# the <filename>_data directory.
+	#
+	# We use this vector file to load rectangles (5 point GROUP).
+	#
+	# The rectangles that are close to our target box size (with some
+	# fuzz) are retained.
+	#
+	# Line GROUPs in the vector file are taken.  Lines that are
+	# horizontal OR vertical and satisfy the target box size requirements
+	# are retained.  Out of these, rectangles are created where possible.
+	#
+	# The rectangles from the 5 point GROUP and the 2 point GROUP are
+	# the final rectangles that are considered to contain voter data.
+	#
+	shapeFileName = thisPage.getchildren()[-1].attrib['href']
+	try:
+		doc = ET.parse(os.path.join(os.path.dirname(filename), shapeFileName))
+	except:
+		# maybe the path in the file is OK
+		doc = ET.parse(shapeFileName)
+	root = doc.getroot()
+	groups = root.findall('GROUP')
+
+	minW = cfg['infoBoxWidthRange'][0]
+	maxW = cfg['infoBoxWidthRange'][1]
+	minH = cfg['infoBoxHeightRange'][0]
+	maxH = cfg['infoBoxHeightRange'][1]
+
+	rectsVoter = findRects(groups, minW, maxW, minH, maxH)
 	def cmpRects(r1,r2):
 		r1_y = r1[1]
 		r2_y = r2[1]
@@ -196,8 +199,8 @@ def computeDataRegions(filename, cfg, thisPage):
 			return 1
 		return 0
 	# Sort with Y first, then X
-	rects.sort(cmp=cmpRects)
-	return rects
+	rectsVoter.sort(cmp=cmpRects)
+	return rectsVoter
 
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
