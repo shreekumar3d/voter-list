@@ -171,7 +171,7 @@ def computeDataRegions(filename, cfg, thisPage):
 					break
 		if hcand2:
 			for vl in vlines:
-				if coordMatch(hcand2[2], vl[2]) and coordMatch(hcand2[3], vl[3]) and coordMatch(vl[0], hcand2[2]) and coordMatch(vl[1], hcand2[3]):
+				if coordMatch(hcand2[2], vl[2]) and coordMatch(hcand2[3], vl[3]) and coordMatch(vl[0], hcand1[2]) and coordMatch(vl[1], hcand1[3]):
 					vcand2 = vl
 					break
 		if vcand2:
