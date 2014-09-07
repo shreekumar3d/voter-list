@@ -393,14 +393,21 @@ def getVoterInfo(cfg, thisPage, rects, pageNo, debugMatch):
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", type=str, help="file to process")
+parser.add_argument("--output", type=str, help="Write results to this file, defauts to voterlist.csv")
 parser.add_argument("-e", "--epic", type=str, help="EPIC number filter, use with debugging")
 parser.add_argument("-p", "--page", type=int, help="Page number, use with debugging")
 parser.add_argument("-s", "--source-pdf", type=str, help="Use this source PDF file for annotation. This will typically be the original source for the XML file.")
 parser.add_argument("-d", "--debug", help="Generate debug information. If both 'epic' and 'page' are specified, then match both. If both are not given, then all records are dumped.  If only one is specified, then only that aspect is matched.", action="store_true")
 args = parser.parse_args()
 
+# Default to voterlist.csv if no other filename is given
+if not args.output:
+	args.output = 'voterlist.csv'
+
 # Parse document, find all pages
-print 'Processing %s...'%(args.filename)
+print '%s => %s ...'%(args.filename, args.output),
+sys.stdout.flush()
+
 doc = ET.parse(args.filename) #'indented-vl-eng.xml'
 root = doc.getroot()
 pages = root.findall('PAGE')
@@ -446,10 +453,9 @@ for pageInfo in zip(range(len(pages)),pages):
 	if len(vInfo)>0:
 		voterInfo.extend(vInfo)
 
-fname = 'voterlist.csv'
-print 'Writing data for %d voters to %s'%(len(voterInfo), fname)
+print 'Total %d records.'%(len(voterInfo))
 
-f= codecs.open(fname,'w','utf-8')
+f= codecs.open(args.output,'w','utf-8')
 print >>f,"PageNo,SerialNo,EPIC,Name,Age,Sex,Relation,RelativeName,HouseInfo"
 
 fieldOrder = ['page', 'serial', 'epic', 'name', 'age', 'sex', 'relation', 
