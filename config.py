@@ -21,7 +21,7 @@ default = {
 	# Text in each box can be haphazardly aligned
 	# Text that is offset by as much as 'lineSeparation'
 	# points is treated as a continuous string...
-	'lineSeparation' : 5.0,
+	'lineSeparation' : 2.0,
 }
 
 # Start off with no overrides. Do not change the
@@ -31,5 +31,5 @@ override = {}
 # Start defining overrides. 
 # Override key is the filename, without extension
 # Unspecified values are used from the default
-
+# e.g.
 override['AC1540310'] = { 'lineSeparation' : 2.0 }
