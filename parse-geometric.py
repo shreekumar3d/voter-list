@@ -277,7 +277,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		textNodes.pop(0)
 
 	# Filter out certain keywords that will not make it into the data
-	blacklist = ['Name',':','No.', 'Photo','Not', 'Available']
+	blacklist = ['Name',':', 'Photo','Not', 'Available']
 	textNodes = filter(lambda x: x.text not in blacklist, textNodes)
 	outNodes = []
 	textCoords = []
@@ -325,6 +325,8 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 					info["relation"] = ob.groups()[0]
 				break
 		if (not nodeChanged) and (appendTo is not None):
+			if (len(info[appendTo])==0) and (appendTo=='residence'):
+				content = re.sub('^No\.', '', content)
 			info[appendTo] =( '%s %s'%(info[appendTo], content)).strip()
 			info["debug"][appendTo].append(coords)
 		else:
