@@ -458,14 +458,17 @@ for pageInfo in zip(range(len(pages)),pages):
 print 'Total %d records.'%(len(voterInfo))
 
 f= codecs.open(args.output,'w','utf-8')
-print >>f,"PageNo,SerialNo,EPIC,Name,Age,Sex,Relation,RelativeName,HouseInfo"
+
+sep = '|' # field separator
 
 fieldOrder = ['page', 'serial', 'epic', 'name', 'age', 'sex', 'relation', 
               'relative', 'residence' ]
+print >>f, string.join(fieldOrder, sep)
+
 for vInfo in voterInfo:
 	values = map(lambda fieldName: vInfo[fieldName], fieldOrder)
 	values[0] = str(values[0]) # Convert page number to string
-	print >>f, string.join(values, '|') # pipe separator, not comma
+	print >>f, string.join(values, sep) 
 
 f.close()
 
