@@ -34,14 +34,28 @@ matra_append = []
 for mc in matra_combinations:
 	matra_append.append(mc[1:])
 
-combinations = copy(swaras) 
+anusvara_visarga = matra_append[-2:]
+matra_append = matra_append[:-2]
 
 # the ka-gunita
 # this is what you learn in primary school
 ka_gunita = []
+
+combinations = copy(swaras)
+for ch in swaras: 
+	for append in anusvara_visarga:
+		nextOne = ch + append
+		ka_gunita.append(nextOne)
+
 for ch in vyanjanas:
 	for append in matra_append:
 		nextOne = ch+append
+		ka_gunita.append(nextOne)
+		for ch2 in anusvara_visarga:
+			nextOne = ch + append + ch2
+			ka_gunita.append(nextOne)
+	for append in anusvara_visarga:
+		nextOne = ch + append
 		ka_gunita.append(nextOne)
 
 combinations += ka_gunita
