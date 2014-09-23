@@ -92,7 +92,10 @@ if __name__ == '__main__':
 	inf = codecs.open("glyph.txt", "r", "utf-8")
 	outf = codecs.open('out.txt', 'w', 'utf-8')
 	# Shree
-	for lookupStr in inf.readlines():
-		lookupStr = lookupStr[:-1]
-		result = lookahead.lookup(lookupStr)
-		print >>outf, result
+	lookupStr = inf.read()	
+	result = lookahead.lookup(lookupStr)
+	#print 'Output: ',
+	#for ch in result:
+	#	print '%03x'%(ord(ch)),
+	#print
+	print >>outf, result
