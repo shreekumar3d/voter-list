@@ -89,7 +89,10 @@ whitespace = [ u" ", u"\t" ]
 combinations += punctuations
 combinations += numbers
 combinations += whitespace
- 
+
+special = [ u"ಕ್ಷ್ಮಿ" ]
+combinations += special
+
 outf = codecs.open(unicodeFileName, "w","utf-8") 	
 for ch in combinations:
 	print >>outf, ch
