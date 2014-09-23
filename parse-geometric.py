@@ -10,6 +10,7 @@ import sys
 import string
 from copy import copy
 import os
+import glyphmapper
 
 config = {}
 
@@ -223,6 +224,27 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		return 0
 
 	textNodes.sort(cmp=cmpBoxFields)
+
+	# Do unicode conversion back from glyphs if necessary
+	for node in textNodes:
+		global lookahead
+		if type(node.text) is str:
+			nodeText = node.text
+		else:
+			try:
+				outs = u""
+				for ch in node.text:
+					if ord(ch)>=0xE000:
+						outs += unichr(ord(ch)-0xE000)
+					else:
+						outs += ch
+				#for ch in outs:
+				#	print "%03x"%(ord(ch)),
+				#print "=> "
+				nodeText = lookahead.lookup(outs)
+			except Exception, e:
+				nodeText =  "<Fail conversion>" + str(e)
+		node.text = nodeText
 
 	boxTextNodes = copy(textNodes)
 
@@ -440,6 +462,8 @@ def debugMatch(pageNo, epic):
 
 	return False
 
+lookahead = glyphmapper.loadMapping("kn-unicode-combinations.txt",
+                        "kn-glyph-combinations.txt")
 # For each page, figure out the rects that
 # contain voter info, then extract data
 # from each.
