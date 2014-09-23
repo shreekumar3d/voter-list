@@ -14,13 +14,13 @@ u"ಎ", u"ಏ", u"ಐ", u"ಒ", u"ಓ", u"ಔ", u"ಅಂ", u"ಅಃ"
 
 # vyanjana
 vyanjanas = [ 
-u"ಕ", u"ಖ", u"ಗ", u"ಘ", 
-u"ಚ", u"ಛ", u"ಜ", u"ಝ", 
+u"ಕ", u"ಖ", u"ಗ", u"ಘ", u"\u0c99", 
+u"ಚ", u"ಛ", u"ಜ", u"ಝ", u"ಞ", 
 u"ಟ", u"ಠ", u"ಡ", u"ಢ", u"ಣ",
 u"ತ", u"ಥ", u"ದ", u"ಧ", u"ನ",
 u"ಪ", u"ಫ", u"ಬ", u"ಭ", u"ಮ",
-u"ಯ", u"ರ", u"ಲ", u"ವ", u"ಶ", u"ಷ",
-u"ಸ", u"ಹ", u"ಳ"
+u"ಯ", u"ರ", u"ಲ", u"ವ", u"ಶ", u"ಷ", u"\u0cb1", # cb1 is halegannada La
+u"ಸ", u"ಹ", u"ಳ", u"ಕ್ಷ", u"ಜ್ಞ"
 ]
 
 matra_combinations = [ 
@@ -90,9 +90,8 @@ combinations += punctuations
 combinations += numbers
 combinations += whitespace
 
-special = [ u"ಕ್ಷ್ಮಿ" ]
-combinations += special
-
+specials = [ u"ಸ್ತ್ರೀ" ]
+combinations += specials
 outf = codecs.open(unicodeFileName, "w","utf-8") 	
 for ch in combinations:
 	print >>outf, ch
