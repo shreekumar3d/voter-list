@@ -365,7 +365,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 				print 
 				print indent,
 			try:
-				print tok.text,
+				print u"'%s'"%(tok.text),
 			except:
 				print 'Unicode',
 			prevTok = tok
