@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 import xml.etree.ElementTree as ET
 import re
 import math
@@ -250,11 +251,15 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 
 	reVoterId = re.compile('[A-Z].*[0-9]{6,}')
 	reElector = re.compile("Elector's") # Words seem to be getting split in the PDF
-	reRelative = re.compile("(Father|Husband|Mother)'s")
-	reHouse = re.compile("House")
+	#reRelative = re.compile("(Father|Husband|Mother)'s")
+	reRelative = re.compile(u"(ತಂದೆ|ತಾಯಿ|ಗಂಡ)")
+	#reHouse = re.compile("House")
+	reHouse = re.compile(u"ಮನೆ")
 	rePhoto = re.compile("Photo")
-	reAge = re.compile("Age")
-	reSex = re.compile("Sex")
+	#reAge = re.compile("Age")
+	reAge = re.compile(u"ವಯಸ್ಸು")
+	#reSex = re.compile("Sex")
+	reSex = re.compile(u"ಲಿಂಗ")
 	reSerial = re.compile("[0-9]+")
 
 	info = {}
@@ -299,7 +304,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		textNodes.pop(0)
 
 	# Filter out certain keywords that will not make it into the data
-	blacklist = ['Name',':', 'Photo','Not', 'Available']
+	blacklist = ['Name',u'ಹೆಸರು', ':', 'Photo','Not', 'Available']
 	textNodes = filter(lambda x: x.text not in blacklist, textNodes)
 	outNodes = []
 	textCoords = []
