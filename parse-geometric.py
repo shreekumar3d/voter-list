@@ -260,6 +260,27 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
 
+def extractTextInOrder(cfg, textNodes):
+	if len(textNodes)==0:
+		return ''
+	# Notes: nodes are assumed to be sorted using 
+	# arrangeTextBoxesInOrder
+	v_tolerance = cfg['lineSeparation']
+	retVal = textNodes[0].text
+	prevRect = getNodeRect(textNodes[0])
+	for node in textNodes[1:]:
+		thisRect = getNodeRect(node)
+		# If text change row, add a space
+		if math.fabs(thisRect[1]-prevRect[1]) > v_tolerance:
+			retVal += ' '
+		# Renderer splits unicode rendering right between words
+		# If the split is large enough, add a space.
+		elif (thisRect[0]-prevRect[3]) > 1.0:
+			retVal += ' '
+		retVal += node.text
+		prevRect = thisRect
+	return retVal
+
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
 		return None
@@ -372,13 +393,9 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		leftNodes, textNodes = extractNodesIn(cfg, leftRect, None, textNodes)
 		rightNodes, textNodes = extractNodesIn(cfg, rightRect, None, textNodes)
 		arrangeTextBoxesInOrder(cfg, leftNodes)
-		leftText = ""
-		for n in leftNodes:
-			leftText += n.text
+		leftText = extractTextInOrder(cfg, leftNodes)
 		arrangeTextBoxesInOrder(cfg, rightNodes)
-		rightText = ""
-		for n in rightNodes:
-			rightText += n.text
+		rightText = extractTextInOrder(cfg, rightNodes)
 		fullText = leftText + rightText
 		parts = fullText.split(':')
 		info[field] = parts[1]
@@ -396,9 +413,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		return None
 	# Get the age & sex text
 	arrangeTextBoxesInOrder(cfg, ageSexNodes)
-	ageSexText = ""
-	for n in ageSexNodes:
-		ageSexText += n.text
+	ageSexText = extractTextInOrder(cfg, ageSexNodes)
 	parts = ageSexText.split(':')
 	# Sex is everything after second colon
 	info['sex'] = parts[2]
