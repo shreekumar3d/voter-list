@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # Configuration file for processing XML files.
 # 
@@ -33,3 +34,8 @@ override = {}
 # Unspecified values are used from the default
 # e.g.
 override['AC1540310'] = { 'lineSeparation' : 2.0 }
+
+override['AC2080142'] = {
+	'snBox' : [ 0, 0, 0.25, 0.2 ],
+	'epicBox' : [0.25, 0, 1.0, 0.2],
+}

@@ -9,7 +9,7 @@ import codecs
 import argparse
 import sys
 import string
-from copy import copy
+from copy import copy,deepcopy
 import os
 import glyphmapper
 
@@ -204,6 +204,36 @@ def computeDataRegions(filename, cfg, thisPage):
 	rectsVoter.sort(cmp=cmpRects)
 	return rectsVoter
 
+def nodesInRect(nodes, rect):
+	ret = []
+	for node in nodes:
+		x = float(node.attrib['x'])
+		y = float(node.attrib['y'])
+		w = float(node.attrib['width'])
+		h = float(node.attrib['height'])
+		if pointInRect(x,y, rect):
+			ret.append(node)
+	return ret
+
+def getRect(cfg, textRect, label):
+	box = deepcopy(cfg[label])
+	trWidth = textRect[2]-textRect[0]
+	trHeight = textRect[3]-textRect[1]
+	box[0] = textRect[0] + box[0]*trWidth
+	box[1] = textRect[1] + box[1]*trHeight
+	box[2] = textRect[0] + box[2]*trWidth
+	box[3] = textRect[1] + box[3]*trHeight
+	return box
+
+def extractNodesIn(cfg, textRect, label, textNodes):
+	labelBox = getRect(cfg, textRect, label)
+	passNodes = nodesInRect(textNodes, labelBox)
+	failNodes = filter(lambda x:x not in passNodes, textNodes)
+	return passNodes, failNodes
+
+def createRectWH(rect):
+	return [rect[0], rect[1], rect[2]-rect[0], rect[3]-rect[1]]
+
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
 		return None
@@ -266,42 +296,26 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 
 	info['page'] = pageNo
 
-	# First item in the list needs to be the serial number
-	ob = reSerial.match(textNodes[0].text)
-	if ob:
-		info["serial"] = ob.group()
-		textNodes.pop(0)
-	else:
-		# If the first item is not a serial number, then
-		# keep adding till you find the number
-		# This handles the case where there's an extra "(S)"
-		# No idea what this stands for !
-		serial = textNodes[0].text
-		idx = 1
-		while True:
-			#print 'considering :',textNodes[idx].text
-			ob = reSerial.match(textNodes[idx].text)
-			if ob:
-				#print 'matched'
-				serial = serial + ' ' + textNodes[idx].text
-				info['serial'] = serial
-				idx = idx + 1
-				break
-			serial = serial + ' ' + textNodes[idx].text
-			idx = idx + 1
-			if len(serial)>10:
-				print '!!! ERROR - invalid serial'
-				return None
-		for i in range(idx):
-			textNodes.pop(0)
+	snNodes, textNodes = extractNodesIn(cfg, textRect, 'snBox', textNodes)
+	if len(snNodes)>0:
+		snTexts = map(lambda x: x.text, snNodes)
+		serial = string.join(snTexts, u" ")
+		if len(serial)>10:
+			print '!!! ERROR - invalid serial : %s'%(serial)
+			return None
+		info['serial'] = serial
 
 	# Next item is the EPIC number. This may be missed in
 	# some nodes!
+	epicNodes, textNodes = extractNodesIn(cfg, textRect, 'epicBox', textNodes)
 	info["epic"] = ""
-	ob = reVoterId.match(textNodes[0].text)
-	if ob:
-		info["epic"] = ob.group()
-		textNodes.pop(0)
+	if len(epicNodes)>0:
+		epicTexts = map(lambda x: x.text, epicNodes)
+		epic = string.join(epicTexts, u" ")
+		if len(epic)>30:
+			print '!!! ERROR - invalid EPIC : %s'%(epic)
+			return None
+		info['epic'] = epic
 
 	# Filter out certain keywords that will not make it into the data
 	blacklist = ['Name',u'ಹೆಸರು', ':', 'Photo','Not', 'Available']
@@ -374,6 +388,11 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 			except:
 				print 'Unicode',
 			prevTok = tok
+
+#		for gtype in ['snBox', 'epicBox']:
+#			snBox = deepcopy(cfg[gtype])
+#			info['debug']['rejected'].append(createRectWH(snBox))
+
 		print
 		print 'Output for record:'
 		pprint(info)
@@ -381,19 +400,19 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	#print info
 	return info
 
-def getVoterInfo(cfg, thisPage, rects, pageNo, debugMatch):
-	def pointInRect(x, y, r):
-		eps = 0.1
-		if x<(r[0]-eps):
-			return False
-		if y<(r[1]-eps):
-			return False
-		if x>(r[2]-eps):
-			return False
-		if y>(r[3]-eps):
-			return False
-		return True
+def pointInRect(x, y, r):
+	eps = 0.1
+	if x<(r[0]-eps):
+		return False
+	if y<(r[1]-eps):
+		return False
+	if x>(r[2]-eps):
+		return False
+	if y>(r[3]-eps):
+		return False
+	return True
 
+def getVoterInfo(cfg, thisPage, rects, pageNo, debugMatch):
 	tokens = thisPage.findall('.//TOKEN')
 
 	voterInfo = []
@@ -501,9 +520,9 @@ for vInfo in voterInfo:
 
 f.close()
 
-def createRect(r, x, y, w, h):
+def createRect(r, x, y, w, h, colour='#ff0000'):
 	attribs = {
-		'style':"fill:none;stroke:#ff0000;stroke-opacity:1",
+		'style':"fill:none;stroke:%s;stroke-opacity:1"%(colour),
 		'd':"M %f %f L %f %f L %f %f L %f %f L %f %f"%(x, y, x+w, y, x+w, y+h, x, y+h, x, y) }
 	rect = ET.SubElement(r, 'ns0:path', attribs)
 	return rect
@@ -517,6 +536,10 @@ if (args.debug is not None) and (args.page is not None) and (args.source_pdf is 
 	for vInfo in voterInfo:
 		debugInfo = vInfo['debug']
 		for kv in debugInfo.keys():
+			if kv=='rejected':
+				colour = '#00ff00'
+			else:
+				colour = '#ff0000'
 			for rect in debugInfo[kv]:
-				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3])
+				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3], colour)
 	svgDoc.write(output)
