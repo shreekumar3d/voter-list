@@ -204,14 +204,18 @@ def computeDataRegions(filename, cfg, thisPage):
 	rectsVoter.sort(cmp=cmpRects)
 	return rectsVoter
 
+def getNodeRect(node):
+	x = float(node.attrib['x'])
+	y = float(node.attrib['y'])
+	w = float(node.attrib['width'])
+	h = float(node.attrib['height'])
+	return [x, y, x+w, y+h]
+
 def nodesInRect(nodes, rect):
 	ret = []
 	for node in nodes:
-		x = float(node.attrib['x'])
-		y = float(node.attrib['y'])
-		w = float(node.attrib['width'])
-		h = float(node.attrib['height'])
-		if pointInRect(x,y, rect):
+		x1, y1, x2, y2 = getNodeRect(node)
+		if pointInRect(x1,y1, rect):
 			ret.append(node)
 	return ret
 
@@ -226,7 +230,10 @@ def getRect(cfg, textRect, label):
 	return box
 
 def extractNodesIn(cfg, textRect, label, textNodes):
-	labelBox = getRect(cfg, textRect, label)
+	if label is None:
+		labelBox = textRect
+	else:
+		labelBox = getRect(cfg, textRect, label)
 	passNodes = nodesInRect(textNodes, labelBox)
 	failNodes = filter(lambda x:x not in passNodes, textNodes)
 	return passNodes, failNodes
@@ -234,9 +241,7 @@ def extractNodesIn(cfg, textRect, label, textNodes):
 def createRectWH(rect):
 	return [rect[0], rect[1], rect[2]-rect[0], rect[3]-rect[1]]
 
-def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
-	if len(textNodes) == 0:
-		return None
+def arrangeTextBoxesInOrder(cfg, textNodes): 
 	v_tolerance = cfg['lineSeparation']
 	def cmpBoxFields(a, b):
 		y1 = float(a.attrib['y'])
@@ -253,8 +258,13 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		elif x1 > x2:
 			return 1
 		return 0
-
 	textNodes.sort(cmp=cmpBoxFields)
+
+def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
+	if len(textNodes) == 0:
+		return None
+	v_tolerance = cfg['lineSeparation']
+	arrangeTextBoxesInOrder(cfg, textNodes)
 
 	# Do unicode conversion back from glyphs if necessary
 	for node in textNodes:
@@ -295,6 +305,20 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	info = {}
 
 	info['page'] = pageNo
+	info["name"] = ""
+	info["relative"] = ""
+	info["relation"] = ""
+	info["residence"] = ""
+	info["age"] = ""
+	info["sex"] = ""
+
+	infoKeys = info.keys()
+	info["debug"] = {}
+	for k in infoKeys:
+		info['debug'][k] = []
+	info['debug']['rejected'] = []
+	info['debug']['leftRect'] = []
+	info['debug']['rightRect'] = []
 
 	snNodes, textNodes = extractNodesIn(cfg, textRect, 'snBox', textNodes)
 	if len(snNodes)>0:
@@ -317,61 +341,74 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 			return None
 		info['epic'] = epic
 
-	# Filter out certain keywords that will not make it into the data
-	blacklist = ['Name',u'ಹೆಸರು', ':', 'Photo','Not', 'Available']
-	textNodes = filter(lambda x: x.text not in blacklist, textNodes)
-	outNodes = []
-	textCoords = []
-	for s in textNodes:
-		try:
-			txt = s.text.strip()
-		except:
-			continue
-		for token in blacklist:
-			txt = txt.replace(token, '')
-			txt = txt.strip()
-		if len(txt)>0:
-			outNodes.append(txt)
-			textCoords.append([float(s.attrib['x']), float(s.attrib['y']), float(s.attrib['width']), float(s.attrib['height'])])
-	textNodes = outNodes
+	# Find all nodes with a colon with them.
+	# These will be for Name, relative's name, House No, Age and Sex
+	colonNodes = filter(lambda x: x.text.find(':')>=0, textNodes)
+	if len(colonNodes)!=5:
+		print '!!! ERROR - colon logic failed. Number of colonNodes = %d, expected 5'%(len(colonNodes))
+		return None
 
-	appendTo = None
-	info["name"] = ""
-	info["relative"] = ""
-	info["relation"] = ""
-	info["residence"] = ""
-	info["age"] = ""
-	info["sex"] = ""
+	# Name's text will start below the SN box, ie the max Y
+	snRect = getRect(cfg, textRect, "snBox")
+	lastY = snRect[3]
+	
+	# Handle name, relative and residence
+	fieldOrder = ['name','relative','residence']
+	for node, field in zip(colonNodes[:3],fieldOrder):
+		cnRect = getNodeRect(node)
+		# Negative correction to ensure that end of rectangle is 
+		# closer to baseline of text. Note that the text size _may_
+		# vary between the colonNodes, so we have to compute this
+		# from the colon node
+		baseLine =  cnRect[1]+((cnRect[3]-cnRect[1])*0.5)
+		# left of colon
+		leftRect = [textRect[0], lastY, cnRect[2], baseLine]
+		# right of colon. NOTE: the colon could be embedded, e.g.
+		# as in the house no nodes
+		rightRect = [cnRect[2], lastY, textRect[2], baseLine]
+		lastY = baseLine
+		info['debug']['leftRect'].append(createRectWH(leftRect))
+		info['debug']['rightRect'].append(createRectWH(rightRect))
+		leftNodes, textNodes = extractNodesIn(cfg, leftRect, None, textNodes)
+		rightNodes, textNodes = extractNodesIn(cfg, rightRect, None, textNodes)
+		arrangeTextBoxesInOrder(cfg, leftNodes)
+		leftText = ""
+		for n in leftNodes:
+			leftText += n.text
+		arrangeTextBoxesInOrder(cfg, rightNodes)
+		rightText = ""
+		for n in rightNodes:
+			rightText += n.text
+		fullText = leftText + rightText
+		parts = fullText.split(':')
+		info[field] = parts[1]
 
-	infoKeys = info.keys()
-	info["debug"] = {}
-	for k in infoKeys:
-		info['debug'][k] = []
-	info['debug']['rejected'] = []
-
-	appendTo = "name" # By default after EPIC
-	for content,coords in zip(textNodes, textCoords):
-		nodeChanged = False
-		for tryMatch in zip(['name','relative','residence','age','sex'], [reElector, reRelative, reHouse, reAge, reSex]):
-			ob = tryMatch[1].match(content)
+		if field == 'relative':
+			ob = reRelative.match(parts[0])
 			if ob:
-				# Geometric constraint: these labels are aligned
-				# to the left
-				if tryMatch[0] in ["age", "name", "relative", "residence"]:
-					if coords[0]>(textRect[0]+20):
-						continue
-				appendTo = tryMatch[0]
-				nodeChanged = True
-				if tryMatch[0] == 'relative':
-					info["relation"] = ob.groups()[0]
-				break
-		if (not nodeChanged) and (appendTo is not None):
-			if (len(info[appendTo])==0) and (appendTo=='residence'):
-				content = re.sub('^No\.', '', content)
-			info[appendTo] =( '%s %s'%(info[appendTo], content)).strip()
-			info["debug"][appendTo].append(coords)
-		else:
-			info['debug']['rejected'].append(coords)
+				info["relation"] = ob.groups()[0]
+
+	# Next, process Age and Sex
+	remainingRect = [textRect[0], lastY, textRect[2], textRect[3]]
+	ageSexNodes, textNodes = extractNodesIn(cfg, remainingRect, None, textNodes)
+	if len(textNodes)>0:
+		print '!!! ERROR: No nodes should remain after age & sex have been extraced'
+		return None
+	# Get the age & sex text
+	arrangeTextBoxesInOrder(cfg, ageSexNodes)
+	ageSexText = ""
+	for n in ageSexNodes:
+		ageSexText += n.text
+	parts = ageSexText.split(':')
+	# Sex is everything after second colon
+	info['sex'] = parts[2]
+	# And, age is everything between the first colon and
+	# the start of the sex token 
+	ageCandidate = parts[1]+':'+parts[2]
+	sexNode = filter(lambda x: reSex.match(x.text), ageSexNodes)[0]
+	sexIdx = ageCandidate.find(sexNode.text)
+	if sexIdx > -1:
+		info['age'] = ageCandidate[:sexIdx]
 
 	if debugMatch(pageNo, info['epic']):
 		print 'Matching record at page %3d'%(pageNo)
@@ -389,9 +426,6 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 				print 'Unicode',
 			prevTok = tok
 
-#		for gtype in ['snBox', 'epicBox']:
-#			snBox = deepcopy(cfg[gtype])
-#			info['debug']['rejected'].append(createRectWH(snBox))
 
 		print
 		print 'Output for record:'
@@ -520,9 +554,9 @@ for vInfo in voterInfo:
 
 f.close()
 
-def createRect(r, x, y, w, h, colour='#ff0000'):
+def createRect(r, x, y, w, h, style):
 	attribs = {
-		'style':"fill:none;stroke:%s;stroke-opacity:1"%(colour),
+		'style':style,
 		'd':"M %f %f L %f %f L %f %f L %f %f L %f %f"%(x, y, x+w, y, x+w, y+h, x, y+h, x, y) }
 	rect = ET.SubElement(r, 'ns0:path', attribs)
 	return rect
@@ -536,10 +570,12 @@ if (args.debug is not None) and (args.page is not None) and (args.source_pdf is 
 	for vInfo in voterInfo:
 		debugInfo = vInfo['debug']
 		for kv in debugInfo.keys():
-			if kv=='rejected':
-				colour = '#00ff00'
-			else:
-				colour = '#ff0000'
+			try:
+				print 'style for :', kv, ' is ',
+				style = cfg['style'][kv]
+			except:
+				style = cfg['style']['default']
+			print style
 			for rect in debugInfo[kv]:
-				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3], colour)
+				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3], style)
 	svgDoc.write(output)

@@ -23,6 +23,12 @@ default = {
 	# Text that is offset by as much as 'lineSeparation'
 	# points is treated as a continuous string...
 	'lineSeparation' : 2.0,
+
+	'style': { 
+		'default':"fill:none;stroke:#ff0000;stroke-opacity:0.2",
+		'leftRect':"fill:none;stroke:#00ff00;stroke-opacity:1",
+		'rightRect':"fill:none;stroke:#0000ff;stroke-opacity:1",
+	}
 }
 
 # Start off with no overrides. Do not change the
