@@ -276,26 +276,12 @@ def unicodeLookup(text):
 		nodeText =  "<Fail conversion>" + str(e)
 	return nodeText
 
-def extractTextInOrder(cfg, textNodes):
+def extractText(cfg, textNodes):
 	if len(textNodes)==0:
 		return ''
-	sep = '' # Disable most of the complex logic below!
-	# Notes: nodes are assumed to be sorted using 
-	# arrangeTextBoxesInOrder
-	v_tolerance = cfg['lineSeparation']
 	retVal = textNodes[0].text
-	prevRect = getNodeRect(textNodes[0])
 	for node in textNodes[1:]:
-		thisRect = getNodeRect(node)
-		# If text change row, add a space
-		if math.fabs(thisRect[1]-prevRect[1]) > v_tolerance:
-			retVal += sep
-		# Renderer splits unicode rendering right between words
-		# If the split is large enough, add a space.
-		elif (thisRect[0]-prevRect[3]) > 1.0:
-			retVal += sep
 		retVal += node.text
-		prevRect = thisRect
 
 	if type(retVal) is str:
 		return retVal
@@ -351,7 +337,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	info['debug']['rightRect'] = []
 
 	snNodes, textNodes = extractNodesIn(cfg, textRect, 'snBox', textNodes)
-	snText = extractTextInOrder(cfg, snNodes)
+	snText = extractText(cfg, snNodes)
 	if len(snText)>10:
 		print '!!! ERROR - invalid serial : %s'%(serial)
 		return None
@@ -362,7 +348,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	epicNodes, textNodes = extractNodesIn(cfg, textRect, 'epicBox', textNodes)
 	info["epic"] = ""
 	if len(epicNodes)>0:
-		epic = extractTextInOrder(cfg, epicNodes)
+		epic = extractText(cfg, epicNodes)
 		if len(epic)>30:
 			print '!!! ERROR - invalid EPIC : %s'%(epic)
 			return None
@@ -399,9 +385,9 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		leftNodes, textNodes = extractNodesIn(cfg, leftRect, None, textNodes)
 		rightNodes, textNodes = extractNodesIn(cfg, rightRect, None, textNodes)
 		arrangeTextBoxesInOrder(cfg, leftNodes)
-		leftText = extractTextInOrder(cfg, leftNodes)
+		leftText = extractText(cfg, leftNodes)
 		arrangeTextBoxesInOrder(cfg, rightNodes)
-		rightText = extractTextInOrder(cfg, rightNodes)
+		rightText = extractText(cfg, rightNodes)
 		fullText = leftText + rightText
 		parts = fullText.split(':')
 		info[field] = parts[1]
@@ -419,7 +405,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		return None
 	# Get the age & sex text
 	arrangeTextBoxesInOrder(cfg, ageSexNodes)
-	ageSexText = extractTextInOrder(cfg, ageSexNodes)
+	ageSexText = extractText(cfg, ageSexNodes)
 	parts = ageSexText.split(':')
 	# Sex is everything after second colon
 	info['sex'] = parts[2]
