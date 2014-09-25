@@ -427,7 +427,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	# These will be for Name, relative's name, House No
 	colonNodes = filter(lambda x: x.text2.find(':')>=0, textNodes)
 	if len(colonNodes)!=3:
-		print '!!! ERROR - colon logic failed. Number of colonNodes = %d, expected 5'%(len(colonNodes))
+		print '!!! ERROR - colon logic failed. Number of colonNodes = %d, expected 3'%(len(colonNodes))
 		return None
 
 	# Name's text will start below the SN box, ie the max Y
