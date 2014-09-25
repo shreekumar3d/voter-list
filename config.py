@@ -36,7 +36,7 @@ default = {
 	},
 
 	# Do not do unicode processing on text in these fonts
-	'nonUnicodeFonts': ['microsoft sans serif', 'Microsoft Sans Serif']
+	'nonUnicodeFonts': ['microsoft sans serif']
 }
 
 langConfig = {
@@ -49,7 +49,7 @@ langConfig = {
 		"reRelative" : re.compile(u"(ತಂದೆ|ತಾಯಿ|ಗಂಡ)"),
 		"reSex" : re.compile(u"ಲಿಂಗ"),
 		"reAge" : re.compile(u"ವಯಸ್ಸು"),
-	}
+	},
 }
 # Start off with no overrides. Do not change the
 # name of this variable

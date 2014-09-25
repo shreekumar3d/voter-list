@@ -321,6 +321,7 @@ def extractText(cfg, textNodes):
 
 	# Determine the right "space" for the font
 	font = textNodes[0].attrib['font-name']
+	font = font.lower()
 	if font not in cfg['nonUnicodeFonts']:
 		sep = spaceLookup(font)
 	else:
