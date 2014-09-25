@@ -249,7 +249,10 @@ def extractNodesIn(cfg, textRect, label, textNodes):
 def createRectWH(rect):
 	return [rect[0], rect[1], rect[2]-rect[0], rect[3]-rect[1]]
 
-def arrangeTextBoxesInOrder(cfg, textNodes): 
+def arrangeTextBoxesInOrder(cfg, textNodes):
+	if len(textNodes)==0:
+		return
+
 	v_tolerance = cfg['lineSeparation']
 	def cmpBoxFields(a, b):
 		y1 = float(a.attrib['y'])
@@ -267,6 +270,21 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 			return 1
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
+
+	rcInfo = []
+	firstNode = textNodes[0]
+	thisRow = [firstNode]
+	prevY = float(firstNode.attrib['y'])
+	for node in textNodes[1:]:
+		thisY = float(node.attrib['y'])
+		if (thisY-prevY) > v_tolerance:
+			rcInfo.append(thisRow)
+			thisRow = []
+		thisRow.append(node)
+		prevY = thisY
+	if len(thisRow)>0:
+		rcInfo.append(thisRow)
+	return rcInfo
 
 def spaceLookup(font):
 	return lookahead[font].getSpecial(' ')
@@ -329,7 +347,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
 		return None
 	v_tolerance = cfg['lineSeparation']
-	arrangeTextBoxesInOrder(cfg, textNodes)
+	rcInfo = arrangeTextBoxesInOrder(cfg, textNodes)
 
 	# Do unicode conversion back from glyphs if necessary
 	for node in textNodes:
@@ -347,6 +365,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	rePhoto = re.compile("Photo")
 	#reSex = re.compile("Sex")
 	reSex = cfg["lang"]["reSex"]
+	reAge = cfg["lang"]["reAge"]
 
 	info = {}
 
@@ -400,10 +419,14 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 				print 'Unicode',
 			prevTok = tok
 
+	# The last row will have age & sex nodes
+	ageSexNodes = rcInfo[-1]
+	textNodes = filter(lambda x: x not in ageSexNodes, textNodes)
+
 	# Find all nodes with a colon with them.
-	# These will be for Name, relative's name, House No, Age and Sex
+	# These will be for Name, relative's name, House No
 	colonNodes = filter(lambda x: x.text2.find(':')>=0, textNodes)
-	if len(colonNodes)!=5:
+	if len(colonNodes)!=3:
 		print '!!! ERROR - colon logic failed. Number of colonNodes = %d, expected 5'%(len(colonNodes))
 		return None
 
@@ -419,7 +442,10 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		# closer to baseline of text. Note that the text size _may_
 		# vary between the colonNodes, so we have to compute this
 		# from the colon node
-		baseLine =  cnRect[1]+((cnRect[3]-cnRect[1])*0.5)
+		if node=='residence':
+			baseLine = textRect[3]
+		else:
+			baseLine =  cnRect[1]+((cnRect[3]-cnRect[1])*0.5)
 		# left of colon
 		leftRect = [textRect[0], lastY, cnRect[2], baseLine]
 		# right of colon. NOTE: the colon could be embedded, e.g.
@@ -444,11 +470,15 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 				info["relation"] = ob.groups()[0]
 
 	# Next, process Age and Sex
-	remainingRect = [textRect[0], lastY, textRect[2], textRect[3]]
-	ageSexNodes, textNodes = extractNodesIn(cfg, remainingRect, None, textNodes)
 	if len(textNodes)>0:
-		print '!!! ERROR: No nodes should remain after age & sex have been extraced'
+		print '!!! ERROR: No nodes should remain after name, relative processing'
+		print extractText(cfg, textNodes)
+		
 		return None
+	if len(ageSexNodes)==0:
+		print '!!! ERROR: No age sex nodes for processing'
+		return None
+		
 	# Get the age & sex text
 	arrangeTextBoxesInOrder(cfg, ageSexNodes)
 	ageSexText = extractText(cfg, ageSexNodes)

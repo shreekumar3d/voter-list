@@ -43,10 +43,12 @@ langConfig = {
 	"english" : {
 		"reRelative" : re.compile("(Father|Husband|Mother|Other)"),
 		"reSex" : re.compile("Sex"),
+		"reAge" : re.compile("Age"),
 	},
 	"kannada" : {
 		"reRelative" : re.compile(u"(ತಂದೆ|ತಾಯಿ|ಗಂಡ)"),
 		"reSex" : re.compile(u"ಲಿಂಗ"),
+		"reAge" : re.compile(u"ವಯಸ್ಸು"),
 	}
 }
 # Start off with no overrides. Do not change the
