@@ -279,6 +279,7 @@ def unicodeLookup(text):
 def extractTextInOrder(cfg, textNodes):
 	if len(textNodes)==0:
 		return ''
+	sep = '' # Disable most of the complex logic below!
 	# Notes: nodes are assumed to be sorted using 
 	# arrangeTextBoxesInOrder
 	v_tolerance = cfg['lineSeparation']
@@ -288,11 +289,11 @@ def extractTextInOrder(cfg, textNodes):
 		thisRect = getNodeRect(node)
 		# If text change row, add a space
 		if math.fabs(thisRect[1]-prevRect[1]) > v_tolerance:
-			retVal += ' '
+			retVal += sep
 		# Renderer splits unicode rendering right between words
 		# If the split is large enough, add a space.
 		elif (thisRect[0]-prevRect[3]) > 1.0:
-			retVal += ' '
+			retVal += sep
 		retVal += node.text
 		prevRect = thisRect
 
