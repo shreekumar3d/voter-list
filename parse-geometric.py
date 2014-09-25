@@ -260,7 +260,7 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
 
-def unicodeLookup(text):
+def unicodeLookup(text, ignoreErrors):
 	try:
 		outs = u""
 		for ch in text:
@@ -273,7 +273,10 @@ def unicodeLookup(text):
 		#print "=> "
 		nodeText = lookahead.lookup(outs)
 	except Exception, e:
-		nodeText =  "<Fail conversion>" + str(e)
+		if ignoreErrors:
+			nodeText =  "<Fail conversion>"
+		else:
+			raise e
 	return nodeText
 
 def extractText(cfg, textNodes):
@@ -286,7 +289,7 @@ def extractText(cfg, textNodes):
 	if type(retVal) is str:
 		return retVal
 	else:
-		return unicodeLookup(retVal)
+		return unicodeLookup(retVal, False)
 
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
@@ -300,7 +303,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		if type(node.text) is str:
 			nodeText = node.text
 		else:
-			nodeText = unicodeLookup(node.text)
+			nodeText = unicodeLookup(node.text, True)
 		node.text2 = nodeText
 
 	boxTextNodes = copy(textNodes)

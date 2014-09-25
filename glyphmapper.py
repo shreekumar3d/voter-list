@@ -64,8 +64,8 @@ class LookaheadUnicodeExtractor():
 		while idx < len(glyphSequence):
 			partialResult, consumedLen = self.lookupSingle(glyphSequence[idx:])
 			if not partialResult:
-				print u"Unable to convert %s, error at %s, position %d"%(glyphSequence, glyphSequence[idx:], idx)
-				raise Exception()
+				msg =  u"Unable to convert, error at %s, position %d"%(glyphSequence, glyphSequence[idx:], idx)
+				raise ValueError(msg)
 			idx += consumedLen
 			result += partialResult
 		return result
