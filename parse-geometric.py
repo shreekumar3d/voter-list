@@ -4,16 +4,22 @@ import xml.etree.ElementTree as ET
 import re
 import math
 from pprint import pprint
-import sys
 import codecs
 import argparse
-import sys
 import string
 from copy import copy,deepcopy
 import os
 import glyphmapper
 import os.path
 from glob import glob
+
+# Set up python to use UTF-8 encoding on output
+# This allows printf to work without raising
+# exceptions. Similar effect can be achieved by
+# setting PYTHONIOENCODING=UTF-8 in the environment
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 config = {}
 
