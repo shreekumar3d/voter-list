@@ -41,7 +41,7 @@ default = {
 
 langConfig = {
 	"english" : {
-		"reRelative" : re.compile("(Father|Husband|Mother)'s"),
+		"reRelative" : re.compile("(Father|Husband|Mother|Other)"),
 		"reSex" : re.compile("Sex"),
 	},
 	"kannada" : {
