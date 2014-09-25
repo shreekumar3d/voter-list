@@ -93,7 +93,7 @@ combinations += whitespace
 
 specials = [ u"ಸ್ತ್ರೀ", u"ತ್ಸ್ನಾ", u"ತ್ರ್ಯ" ]
 combinations += specials
-outf = codecs.open(unicodeFileName, "w","utf-8") 	
+outf = codecs.open(unicodeFileName, "w","utf-8") 
 for ch in combinations:
 	print >>outf, ch
 outf.close()

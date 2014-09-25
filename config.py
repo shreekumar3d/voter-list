@@ -5,7 +5,7 @@
 #
 # This file is loaded by parse-geometric.py
 #
-
+import re
 
 #
 # Defaults. Note that the name "default" is 
@@ -24,6 +24,11 @@ default = {
 	# points is treated as a continuous string...
 	'lineSeparation' : 2.0,
 
+	# Boxes to recognize SN and EPIC
+	'snBox' : [ 0, 0, 0.25, 0.2 ],
+	'epicBox' : [0.25, 0, 1.0, 0.2],
+
+	# SVG styles for debuggin
 	'style': { 
 		'default':"fill:none;stroke:#ff0000;stroke-opacity:0.2",
 		'leftRect':"fill:none;stroke:#00ff00;stroke-opacity:1",
@@ -31,6 +36,16 @@ default = {
 	}
 }
 
+langConfig = {
+	"english" : {
+		"reRelative" : re.compile("(Father|Husband|Mother)'s"),
+		"reSex" : re.compile("Sex"),
+	},
+	"kannada" : {
+		"reRelative" : re.compile(u"(ತಂದೆ|ತಾಯಿ|ಗಂಡ)"),
+		"reSex" : re.compile(u"ಲಿಂಗ"),
+	}
+}
 # Start off with no overrides. Do not change the
 # name of this variable
 override = {}

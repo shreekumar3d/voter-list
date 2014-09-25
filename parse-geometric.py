@@ -22,7 +22,7 @@ def loadConfig():
 	ign = {}
 	execfile('config.py', ign, config)
 
-def getConfig(filename):
+def getConfig(filename, lang):
 	filename = os.path.basename(filename)
 	filename = filename.replace('.xml','')
 	global config
@@ -35,6 +35,12 @@ def getConfig(filename):
 			retval[kv] = thisOverride[kv]
 	except:
 		pass
+
+	try:
+		retval['lang'] = config['langConfig'][lang]
+	except KeyError, e:
+		print >>sys.stderr, "Unsupported language: %s"%(lang)
+		sys.exit(-1)
 	return retval
 
 def findRects(groups, minW, maxW, minH, maxH):
@@ -312,18 +318,11 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 
 	boxTextNodes = copy(textNodes)
 
-	reVoterId = re.compile('[A-Z].*[0-9]{6,}')
-	reElector = re.compile("Elector's") # Words seem to be getting split in the PDF
 	#reRelative = re.compile("(Father|Husband|Mother)'s")
-	reRelative = re.compile(u"(ತಂದೆ|ತಾಯಿ|ಗಂಡ)")
-	#reHouse = re.compile("House")
-	reHouse = re.compile(u"ಮನೆ")
+	reRelative = cfg["lang"]["reRelative"]
 	rePhoto = re.compile("Photo")
-	#reAge = re.compile("Age")
-	reAge = re.compile(u"ವಯಸ್ಸು")
 	#reSex = re.compile("Sex")
-	reSex = re.compile(u"ಲಿಂಗ")
-	reSerial = re.compile("[0-9]+")
+	reSex = cfg["lang"]["reSex"]
 
 	info = {}
 
@@ -498,6 +497,7 @@ parser.add_argument("-e", "--epic", type=str, help="EPIC number filter, use with
 parser.add_argument("-p", "--page", type=int, help="Page number, use with debugging")
 parser.add_argument("-s", "--source-pdf", type=str, help="Use this source PDF file for annotation. This will typically be the original source for the XML file.")
 parser.add_argument("-d", "--debug", help="Generate debug information. If both 'epic' and 'page' are specified, then match both. If both are not given, then all records are dumped.  If only one is specified, then only that aspect is matched.", action="store_true")
+parser.add_argument("-l", "--language", type=str, help="Specify that voter information in the file is in this language.", required=True)
 args = parser.parse_args()
 
 # Default to voterlist.csv if no other filename is given
@@ -506,6 +506,7 @@ if not args.output:
 
 # Parse document, find all pages
 print '%s => %s ...'%(args.filename, args.output)
+print 'Using language %s.'%(args.language)
 sys.stdout.flush()
 
 doc = ET.parse(args.filename) #'indented-vl-eng.xml'
@@ -513,7 +514,7 @@ root = doc.getroot()
 pages = root.findall('PAGE')
 
 loadConfig()
-cfg = getConfig(args.filename)
+cfg = getConfig(args.filename, args.language)
 
 voterInfo = []
 
