@@ -36,7 +36,7 @@ default = {
 	},
 
 	# Do not do unicode processing on text in these fonts
-	'nonUnicodeFonts': ['microsoft sans serif']
+	'nonUnicodeFonts': ['microsoft sans serif', 'Microsoft Sans Serif']
 }
 
 langConfig = {

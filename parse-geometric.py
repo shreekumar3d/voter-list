@@ -268,6 +268,9 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
 
+def spaceLookup(font):
+	return lookahead[font].getSpecial(' ')
+
 def unicodeLookup(font, text, ignoreErrors):
 	try:
 		outs = u""
@@ -291,9 +294,14 @@ def extractText(cfg, textNodes):
 	if len(textNodes)==0:
 		return ''
 	retVal = textNodes[0].text
-	font = textNodes[0].attrib['font-name']
 
-	sep = ' ' 
+	# Determine the right "space" for the font
+	font = textNodes[0].attrib['font-name']
+	if font not in cfg['nonUnicodeFonts']:
+		sep = spaceLookup(font)
+	else:
+		sep = ' '
+
 	# Notes: nodes are assumed to be sorted using 
 	# arrangeTextBoxesInOrder
 	v_tolerance = cfg['lineSeparation']

@@ -17,7 +17,9 @@ class MyDict(dict):
 class LookaheadUnicodeExtractor():
 	def __init__(self):
 		self.root = MyDict()
-
+		self.root['special'] = {
+			' ' : None
+		}
 	def add(self, glyphSequence, equivalentUnicode):
 		curRoot = self.root
 		for glyph in glyphSequence:
@@ -27,6 +29,12 @@ class LookaheadUnicodeExtractor():
 				curRoot[glyph] = d
 			curRoot = curRoot[glyph]
 		curRoot['value'] = equivalentUnicode
+		if equivalentUnicode in self.root['special'].keys():
+			print "Special for '%s'='%s'"%(equivalentUnicode, glyphSequence)
+			self.root['special'][equivalentUnicode] = glyphSequence
+
+	def getSpecial(self, uc):
+		return self.root['special'][uc]
 
 	def lookupSingle(self, glyphSequence):
 		lookupResult = None
