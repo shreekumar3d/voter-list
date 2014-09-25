@@ -293,10 +293,26 @@ def extractText(cfg, textNodes):
 	retVal = textNodes[0].text
 	font = textNodes[0].attrib['font-name']
 
+	sep = ' ' 
+	# Notes: nodes are assumed to be sorted using 
+	# arrangeTextBoxesInOrder
+	v_tolerance = cfg['lineSeparation']
+        retVal = textNodes[0].text
+	prevRect = getNodeRect(textNodes[0])
 	for node in textNodes[1:]:
+		thisRect = getNodeRect(node)
+		# If text change row, add a space
+		if math.fabs(thisRect[1]-prevRect[1]) > v_tolerance:
+			retVal += sep
+		# Renderer splits unicode rendering right between words
+		# If the split is large enough, add a space.
+		elif (thisRect[0]-prevRect[2]) > 1.0:
+			retVal += sep
+			
 		retVal += node.text
+		prevRect = thisRect
 
-	if type(retVal) is str:
+	if (type(retVal) is str) or (font in cfg['nonUnicodeFonts']):
 		return retVal
 	else:
 		return unicodeLookup(font, retVal, False)
@@ -360,6 +376,22 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 			return None
 		info['epic'] = epic
 
+	if debugMatch(pageNo, info['epic']):
+		print 'Matching record at page %3d'%(pageNo)
+		indent = '  '
+		print indent,
+		print boxTextNodes[0].text2,
+		prevTok = boxTextNodes[0]
+		for tok in boxTextNodes[1:]:
+			if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
+				print 
+				print indent,
+			try:
+				print u"'%s'"%(tok.text2),
+			except:
+				print 'Unicode',
+			prevTok = tok
+
 	# Find all nodes with a colon with them.
 	# These will be for Name, relative's name, House No, Age and Sex
 	colonNodes = filter(lambda x: x.text2.find(':')>=0, textNodes)
@@ -414,32 +446,24 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	ageSexText = extractText(cfg, ageSexNodes)
 	parts = ageSexText.split(':')
 	# Sex is everything after second colon
-	info['sex'] = parts[2]
+	try:
+		info['sex'] = parts[2]
+	except:
+		print '!!! ERROR - failed to get sex'
+		print 'ageSexText = ', ageSexText
+		info['sex'] = '<FAIL>'
 	# And, age is everything between the first colon and
-	# the start of the sex token 
-	ageCandidate = parts[1]+':'+parts[2]
-	sexNode = filter(lambda x: reSex.match(x.text2), ageSexNodes)[0]
-	sexIdx = ageCandidate.find(sexNode.text2)
-	if sexIdx > -1:
-		info['age'] = ageCandidate[:sexIdx]
+	# the start of the sex token
+	try:
+		ageCandidate = parts[1]+':'+parts[2]
+		sexNode = filter(lambda x: reSex.match(x.text2), ageSexNodes)[0]
+		sexIdx = ageCandidate.find(sexNode.text2)
+		if sexIdx > -1:
+			info['age'] = ageCandidate[:sexIdx]
+	except:
+		info['age'] = '<FAIL>'
 
 	if debugMatch(pageNo, info['epic']):
-		print 'Matching record at page %3d'%(pageNo)
-		indent = '  '
-		print indent,
-		print boxTextNodes[0].text2,
-		prevTok = boxTextNodes[0]
-		for tok in boxTextNodes[1:]:
-			if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
-				print 
-				print indent,
-			try:
-				print u"'%s'"%(tok.text2),
-			except:
-				print 'Unicode',
-			prevTok = tok
-
-
 		print
 		print 'Output for record:'
 		pprint(info)
@@ -595,11 +619,9 @@ if (args.debug is not None) and (args.page is not None) and (args.source_pdf is 
 		debugInfo = vInfo['debug']
 		for kv in debugInfo.keys():
 			try:
-				print 'style for :', kv, ' is ',
 				style = cfg['style'][kv]
 			except:
 				style = cfg['style']['default']
-			print style
 			for rect in debugInfo[kv]:
 				createRect(svgRoot, rect[0],rect[1],rect[2],rect[3], style)
 	svgDoc.write(output)

@@ -28,12 +28,15 @@ default = {
 	'snBox' : [ 0, 0, 0.25, 0.2 ],
 	'epicBox' : [0.25, 0, 1.0, 0.2],
 
-	# SVG styles for debuggin
+	# SVG styles for debugging
 	'style': { 
 		'default':"fill:none;stroke:#ff0000;stroke-opacity:0.2",
 		'leftRect':"fill:none;stroke:#00ff00;stroke-opacity:1",
 		'rightRect':"fill:none;stroke:#0000ff;stroke-opacity:1",
-	}
+	},
+
+	# Do not do unicode processing on text in these fonts
+	'nonUnicodeFonts': ['microsoft sans serif']
 }
 
 langConfig = {
