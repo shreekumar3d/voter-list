@@ -441,6 +441,10 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		print 'Output for record:'
 		pprint(info)
 
+	# Remove extra spaces
+	for field in ['name', 'relative', 'relation', 'residence', 'age', 'sex']:
+		info[field] = info[field].strip()
+
 	#print info
 	return info
 
