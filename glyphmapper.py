@@ -3,6 +3,7 @@ import json
 import os
 from pprint import pprint
 import codecs
+import cPickle as pickle
 
 class MyDict(dict):
 	def __getitem__(self, key):
@@ -69,6 +70,21 @@ class LookaheadUnicodeExtractor():
 			idx += consumedLen
 			result += partialResult
 		return result
+
+	def save(self, filename):
+		f = open(filename, 'wb')
+		f.write(pickle.dumps(self.root))
+		f.close()
+
+	def load(self, filename):
+		f = open(filename, 'rb')
+		self.root = pickle.loads(f.read())
+		f.close()
+
+def loadDirect(filename):
+	lookahead = LookaheadUnicodeExtractor()
+	lookahead.load(filename)
+	return lookahead
 
 def loadMapping(unicodeFileName, glyphFileName):
 	decoder = json.JSONDecoder()

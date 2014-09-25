@@ -12,6 +12,8 @@ import string
 from copy import copy,deepcopy
 import os
 import glyphmapper
+import os.path
+from glob import glob
 
 config = {}
 
@@ -260,7 +262,7 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
 
-def unicodeLookup(text, ignoreErrors):
+def unicodeLookup(font, text, ignoreErrors):
 	try:
 		outs = u""
 		for ch in text:
@@ -271,7 +273,7 @@ def unicodeLookup(text, ignoreErrors):
 		#for ch in outs:
 		#	print "%03x"%(ord(ch)),
 		#print "=> "
-		nodeText = lookahead.lookup(outs)
+		nodeText = lookahead[font].lookup(outs)
 	except Exception, e:
 		if ignoreErrors:
 			nodeText =  "<Fail conversion>"
@@ -283,13 +285,15 @@ def extractText(cfg, textNodes):
 	if len(textNodes)==0:
 		return ''
 	retVal = textNodes[0].text
+	font = textNodes[0].attrib['font-name']
+
 	for node in textNodes[1:]:
 		retVal += node.text
 
 	if type(retVal) is str:
 		return retVal
 	else:
-		return unicodeLookup(retVal, False)
+		return unicodeLookup(font, retVal, False)
 
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
@@ -303,7 +307,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		if type(node.text) is str:
 			nodeText = node.text
 		else:
-			nodeText = unicodeLookup(node.text, True)
+			nodeText = unicodeLookup(node.attrib['font-name'],node.text, True)
 		node.text2 = nodeText
 
 	boxTextNodes = copy(textNodes)
@@ -501,7 +505,7 @@ if not args.output:
 	args.output = 'voterlist.csv'
 
 # Parse document, find all pages
-print '%s => %s ...'%(args.filename, args.output),
+print '%s => %s ...'%(args.filename, args.output)
 sys.stdout.flush()
 
 doc = ET.parse(args.filename) #'indented-vl-eng.xml'
@@ -534,8 +538,13 @@ def debugMatch(pageNo, epic):
 
 	return False
 
-lookahead = glyphmapper.loadMapping("kn-unicode-combinations.txt",
-                        "kn-glyph-combinations.txt")
+lookahead = {}
+for filename in glob('data/*.glyphmap'):
+	fontname = os.path.basename(filename)
+	fontname = fontname.replace('.glyphmap','')
+	print 'Loading %s...'%(filename)
+	lookahead[fontname] = glyphmapper.loadDirect(filename)
+
 # For each page, figure out the rects that
 # contain voter info, then extract data
 # from each.

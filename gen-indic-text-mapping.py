@@ -3,6 +3,7 @@
 import codecs
 import os
 from copy import copy
+import glyphmapper
 
 # swaras start from 'a'
 swaras = [ 
@@ -97,6 +98,11 @@ for ch in combinations:
 	print >>outf, ch
 outf.close()
 
-print "Converting to glyphs..."
-os.system("../harfbuzz/util/hb-shape --text-file=%s --output-format=json --output-file=%s fonts/tunga.ttf"%(unicodeFileName, glyphFileName))
+fontName = 'tunga'
+print "Converting font %s to glyphs..."%(fontName)
+os.system("../harfbuzz/util/hb-shape --text-file=%s --output-format=json --output-file=%s fonts/%s.ttf"%(unicodeFileName, glyphFileName, fontName))
 
+lookahead = glyphmapper.loadMapping(unicodeFileName, glyphFileName)
+outfile = 'data/%s.glyphmap'%(fontName)
+print 'Saving %s...'%(outfile)
+lookahead.save(outfile)
