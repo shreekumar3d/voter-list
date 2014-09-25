@@ -260,6 +260,22 @@ def arrangeTextBoxesInOrder(cfg, textNodes):
 		return 0
 	textNodes.sort(cmp=cmpBoxFields)
 
+def unicodeLookup(text):
+	try:
+		outs = u""
+		for ch in text:
+			if ord(ch)>=0xE000:
+				outs += unichr(ord(ch)-0xE000)
+			else:
+				outs += ch
+		#for ch in outs:
+		#	print "%03x"%(ord(ch)),
+		#print "=> "
+		nodeText = lookahead.lookup(outs)
+	except Exception, e:
+		nodeText =  "<Fail conversion>" + str(e)
+	return nodeText
+
 def extractTextInOrder(cfg, textNodes):
 	if len(textNodes)==0:
 		return ''
@@ -279,7 +295,11 @@ def extractTextInOrder(cfg, textNodes):
 			retVal += ' '
 		retVal += node.text
 		prevRect = thisRect
-	return retVal
+
+	if type(retVal) is str:
+		return retVal
+	else:
+		return unicodeLookup(retVal)
 
 def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	if len(textNodes) == 0:
@@ -293,20 +313,8 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		if type(node.text) is str:
 			nodeText = node.text
 		else:
-			try:
-				outs = u""
-				for ch in node.text:
-					if ord(ch)>=0xE000:
-						outs += unichr(ord(ch)-0xE000)
-					else:
-						outs += ch
-				#for ch in outs:
-				#	print "%03x"%(ord(ch)),
-				#print "=> "
-				nodeText = lookahead.lookup(outs)
-			except Exception, e:
-				nodeText =  "<Fail conversion>" + str(e)
-		node.text = nodeText
+			nodeText = unicodeLookup(node.text)
+		node.text2 = nodeText
 
 	boxTextNodes = copy(textNodes)
 
@@ -342,21 +350,18 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	info['debug']['rightRect'] = []
 
 	snNodes, textNodes = extractNodesIn(cfg, textRect, 'snBox', textNodes)
-	if len(snNodes)>0:
-		snTexts = map(lambda x: x.text, snNodes)
-		serial = string.join(snTexts, u" ")
-		if len(serial)>10:
-			print '!!! ERROR - invalid serial : %s'%(serial)
-			return None
-		info['serial'] = serial
+	snText = extractTextInOrder(cfg, snNodes)
+	if len(snText)>10:
+		print '!!! ERROR - invalid serial : %s'%(serial)
+		return None
+	info['serial'] = snText
 
 	# Next item is the EPIC number. This may be missed in
 	# some nodes!
 	epicNodes, textNodes = extractNodesIn(cfg, textRect, 'epicBox', textNodes)
 	info["epic"] = ""
 	if len(epicNodes)>0:
-		epicTexts = map(lambda x: x.text, epicNodes)
-		epic = string.join(epicTexts, u" ")
+		epic = extractTextInOrder(cfg, epicNodes)
 		if len(epic)>30:
 			print '!!! ERROR - invalid EPIC : %s'%(epic)
 			return None
@@ -364,7 +369,7 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 
 	# Find all nodes with a colon with them.
 	# These will be for Name, relative's name, House No, Age and Sex
-	colonNodes = filter(lambda x: x.text.find(':')>=0, textNodes)
+	colonNodes = filter(lambda x: x.text2.find(':')>=0, textNodes)
 	if len(colonNodes)!=5:
 		print '!!! ERROR - colon logic failed. Number of colonNodes = %d, expected 5'%(len(colonNodes))
 		return None
@@ -420,8 +425,8 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 	# And, age is everything between the first colon and
 	# the start of the sex token 
 	ageCandidate = parts[1]+':'+parts[2]
-	sexNode = filter(lambda x: reSex.match(x.text), ageSexNodes)[0]
-	sexIdx = ageCandidate.find(sexNode.text)
+	sexNode = filter(lambda x: reSex.match(x.text2), ageSexNodes)[0]
+	sexIdx = ageCandidate.find(sexNode.text2)
 	if sexIdx > -1:
 		info['age'] = ageCandidate[:sexIdx]
 
@@ -429,14 +434,14 @@ def extractVoterInfo(cfg, textRect, textNodes, pageNo, debugMatch):
 		print 'Matching record at page %3d'%(pageNo)
 		indent = '  '
 		print indent,
-		print boxTextNodes[0].text,
+		print boxTextNodes[0].text2,
 		prevTok = boxTextNodes[0]
 		for tok in boxTextNodes[1:]:
 			if float(tok.attrib['y'])>(float(prevTok.attrib['y'])+v_tolerance):
 				print 
 				print indent,
 			try:
-				print u"'%s'"%(tok.text),
+				print u"'%s'"%(tok.text2),
 			except:
 				print 'Unicode',
 			prevTok = tok
