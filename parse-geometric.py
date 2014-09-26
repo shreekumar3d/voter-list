@@ -296,6 +296,7 @@ def spaceLookup(font):
 	return lookahead[font].getSpecial(' ')
 
 def unicodeLookup(font, text, ignoreErrors):
+	font = font.lower()
 	try:
 		outs = u""
 		for ch in text:
