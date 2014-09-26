@@ -5,6 +5,11 @@ Scripts to process voter lists in PDF format. Voter lists with
 indic chars in them are not handled yet. Only english voter
 lists work as expected. And even then, YMMV.
 
+Support for unicode is being developed in the "unicode-support" branch.
+The unicode branch has additional software depdendencies, including
+patches to be applied to harfbuzz and pdftoxml. I will publish these
+as early as possible.
+
 Usage
 -----
 
